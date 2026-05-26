@@ -38,6 +38,8 @@ import {
 import { ScriptCodeEditorProps } from './types';
 import { createGroovyCompletionSource, createGroovyKeywordSource } from './autocomplete';
 import { TypePanel } from './type-panel';
+import { Toolbar } from './components/toolbar';
+import { ExpandSidebarButton } from './components/expand-sidebar-button';
 
 const darkHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#c678dd' },
@@ -153,7 +155,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   const [sidebarOpen, setSidebarOpen] = useState(
     defaultSidebarOpen ?? (metadata != null)
   );
-  const [expandBtnHovered, setExpandBtnHovered] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(260);
 
   // ── 创建编辑器（仅在首次挂载和布局属性变化时） ──────────
   useEffect(() => {
@@ -254,10 +256,6 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   // ── 渲染 ──────────────────────────────────────────────────
   const isDark = theme === 'dark';
   const borderColor = isDark ? '#434343' : '#d9d9d9';
-  const toolbarBg = isDark ? '#282c34' : '#fafafa';
-  const toolbarText = isDark ? '#abb2bf' : '#333';
-  const btnBg = isDark ? '#2c313a' : '#f0f0f0';
-  const btnHoverBg = isDark ? '#3e4451' : '#e0e0e0';
   const expandBtnBg = isDark ? '#2c313a' : '#f0f0f0';
   const expandBtnColor = isDark ? '#abb2bf' : '#666';
 
@@ -267,65 +265,15 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     }
   };
 
-  const handleThemeToggle = () => {
-    const next = isDark ? 'light' : 'dark';
-    onThemeChange?.(next);
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {/* ── 工具栏 ─────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '6px 12px',
-          backgroundColor: toolbarBg,
-          borderBottom: `1px solid ${borderColor}`,
-          borderRadius: '6px 6px 0 0',
-          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-          fontSize: 13,
-        }}
-      >
-        {title && (
-          <span
-            style={{
-              color: toolbarText,
-              fontWeight: 600,
-              marginRight: 'auto',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            {title}
-          </span>
-        )}
-        {!title && <span style={{ marginRight: 'auto' }} />}
-
-        <ToolbarButton
-          label={isDark ? '☀ 浅色' : '🌙 深色'}
-          title={isDark ? '切换到浅色主题' : '切换到深色主题'}
-          bg={btnBg}
-          hoverBg={btnHoverBg}
-          color={toolbarText}
-          border={borderColor}
-          onClick={handleThemeToggle}
-        />
-
-        {onCompile && (
-          <ToolbarButton
-            label="▶ 编译测试"
-            title="编译并测试脚本"
-            bg={isDark ? '#2d5a27' : '#e6f4e5'}
-            hoverBg={isDark ? '#3a7033' : '#d4ecd3'}
-            color={isDark ? '#98c379' : '#389e0d'}
-            border={isDark ? '#2d5a27' : '#b7eb8f'}
-            onClick={handleCompile}
-          />
-        )}
-      </div>
+      <Toolbar
+        title={title}
+        theme={theme}
+        onThemeChange={onThemeChange}
+        onCompile={onCompile ? handleCompile : undefined}
+      />
 
       {/* ── 编辑器 + 侧边栏 ───────────────────────────── */}
       <div
@@ -339,30 +287,12 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
       >
         <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {metadata && !sidebarOpen && (
-            <button
+            <ExpandSidebarButton
+              borderColor={borderColor}
+              expandBtnColor={expandBtnColor}
+              expandBtnBg={expandBtnBg}
               onClick={() => setSidebarOpen(true)}
-              onMouseEnter={() => setExpandBtnHovered(true)}
-              onMouseLeave={() => setExpandBtnHovered(false)}
-              style={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                zIndex: 10,
-                background: expandBtnHovered ? expandBtnBg : 'transparent',
-                border: `1px solid ${borderColor}`,
-                color: expandBtnColor,
-                cursor: 'pointer',
-                fontSize: 12,
-                padding: '3px 6px',
-                borderRadius: 3,
-                lineHeight: 1,
-                opacity: expandBtnHovered ? 1 : 0.6,
-                transition: 'opacity 0.2s, background 0.2s',
-              }}
-              title="展开属性面板"
-            >
-              属性面板 ◀
-            </button>
+            />
           )}
           <div ref={editorContainerRef} />
         </div>
@@ -372,46 +302,12 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
             theme={theme}
             minHeight={minHeight}
             maxHeight={maxHeight}
+            width={panelWidth}
+            onWidthChange={setPanelWidth}
             onCollapse={() => setSidebarOpen(false)}
           />
         )}
       </div>
     </div>
-  );
-};
-
-// ── 工具栏按钮子组件 ──────────────────────────────────────────
-
-const ToolbarButton: React.FC<{
-  label: string;
-  title: string;
-  bg: string;
-  hoverBg: string;
-  color: string;
-  border: string;
-  onClick: () => void;
-}> = ({ label, title, bg, hoverBg, color, border, onClick }) => {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        background: hovered ? hoverBg : bg,
-        border: `1px solid ${border}`,
-        color,
-        cursor: 'pointer',
-        fontSize: 12,
-        padding: '4px 10px',
-        borderRadius: 4,
-        lineHeight: 1.4,
-        whiteSpace: 'nowrap',
-        transition: 'background 0.15s',
-      }}
-      title={title}
-    >
-      {label}
-    </button>
   );
 };

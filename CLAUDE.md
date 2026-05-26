@@ -43,6 +43,41 @@ apps/app-pc/               → 演示应用 @script-example/app-pc (Rsbuild + Re
 
 库通过 `workspace:*` 被演示应用引用。**开发流程**：先在根目录运行 `watch:script-engine`，再运行 `dev:app-pc`。
 
+## 源码目录结构
+
+```
+packages/script-engine/src/
+├── components/               ← 所有 UI 子组件（每个组件一个文件）
+│   ├── index.ts              ← barrel 导出
+│   ├── theme-colors.ts       ← 共享配色 themes + ThemeColors + ensureScrollbarStyle
+│   ├── toolbar.tsx           ← 工具栏（标题 + 主题切换 + 编译验证）
+│   ├── toolbar-button.tsx    ← 工具栏按钮（通用）
+│   ├── expand-sidebar-button.tsx  ← 展开侧边栏按钮
+│   ├── drag-handle.tsx       ← 属性面板拖拽手柄
+│   ├── panel-header.tsx      ← 属性面板头部
+│   ├── section-header.tsx    ← 通用区块标题（复用 3 处）
+│   ├── variable-row.tsx      ← 变量行（binds/requests 复用）
+│   ├── field-row.tsx         ← 字段行
+│   ├── function-row.tsx      ← 方法行
+│   ├── type-section.tsx      ← 类型展开区块
+│   ├── main-function-section.tsx  ← 主函数展示区
+│   ├── variables-section.tsx ← 变量列表区
+│   └── data-types-section.tsx ← 数据类型列表区
+├── autocomplete/             ← 自动补全逻辑
+│   ├── index.ts
+│   ├── completion-source.ts  ← CompletionSource 工厂函数
+│   └── resolve.ts            ← 类型链解析工具函数
+├── type-panel/               ← 属性面板主组件
+│   ├── index.ts
+│   └── type-panel.tsx        ← TypePanel 主组件（拖拽/排序/布局）
+├── types/
+│   └── index.ts              ← 所有 TypeScript 接口
+├── script-code.tsx           ← ScriptCodeEditor 主组件（CM 配置 + 布局）
+└── index.ts                  ← 库入口
+```
+
+**组件拆分原则**：每个子组件一个文件，导出组件和 Props 接口。`theme-colors.ts` 存放共享配色和全局样式注入函数。
+
 ## 关键架构
 
 ### 库的构建配置 (`packages/script-engine/rslib.config.ts`)
@@ -65,6 +100,8 @@ apps/app-pc/               → 演示应用 @script-example/app-pc (Rsbuild + Re
 
 `onChangeRef` / `metadataRef` 使用 ref 持有回调，避免闭包过期。
 
+`@codemirror/lang-java` 保留用于 Groovy 语法高亮（CodeMirror 6 没有官方 Groovy 语言包）。
+
 ### 自动补全 (`src/autocomplete/`)
 
 - `resolve.ts`：纯函数，解析点号链到具体类型
@@ -83,11 +120,13 @@ apps/app-pc/               → 演示应用 @script-example/app-pc (Rsbuild + Re
 
 纯 React 组件，**不依赖 Ant Design**（antd 仅在演示应用中使用）。
 
-- 使用 CSS-in-JS（React `style` 对象）+ 主题配色 map
+- 使用 CSS-in-JS（React `style` 对象）+ 主题配色 map（来自 `components/theme-colors.ts`）
 - `TypePanel` 固定高度（`minHeight`/`maxHeight` 由编辑器传入），内部可滚动
-- 滚动条样式通过 `<style>` 标签一次性注入 DOM（`ensureScrollbarStyle()`）
+- **宽度可拖拽调节**：拖拽状态由 TypePanel 内部管理，但宽度值（`panelWidth`）由 `ScriptCodeEditor` 持有（提升状态），确保折叠后重新展开时宽度保持
+- 滚动条样式通过 `<style>` 标签一次性注入 DOM（`ensureScrollbarStyle()`，在 `theme-colors.ts` 中）
 - 展示 metadata 中**所有**类型（包括 Integer/String 等基础类型）
 - 滚动容器必须设置 `minHeight: 0`（flex 布局关键修复）
+- 所有列表按 name 字母序排序（`localeCompare`）
 
 ### ScriptMetadata Schema (`src/types/index.ts`)
 
@@ -95,9 +134,10 @@ apps/app-pc/               → 演示应用 @script-example/app-pc (Rsbuild + Re
 
 ```ts
 ScriptMetadata {
-  binds: ScriptBindInfo[]       // 注入变量，如 $request（name 含 $ 前缀）
-  requests: ScriptRequestInfo[] // 函数参数，如 request
-  returnType?: string
+  mainMethod: string              // 主函数名（如 "run"）
+  binds: ScriptBindInfo[]         // 注入变量，如 $request（name 含 $ 前缀）
+  requests: ScriptRequestInfo[]   // 主函数参数，如 request
+  returnType?: string             // 主函数返回类型
   types: Record<string, ScriptTypeInfo>  // 所有可用类型（含基础类型）
 }
 
@@ -106,7 +146,7 @@ ScriptFieldInfo { dataType, description?, name }
 ScriptFunctionInfo { name, parameters[], description?, returnType? }
 ```
 
-`metadata` 是动态的（不同脚本有不同 schema），但结构固定。
+`metadata` 是动态的（不同脚本有不同 schema），但结构固定。`metadata` 必须是**解析后的对象**（不能是 JSON 字符串），否则面板无数据。
 
 ## 类型导出
 
@@ -116,15 +156,15 @@ export * from "./script-code";
 export * from "./types";
 ```
 
-消费者通过 `import type { ScriptMetadata } from '@coding-script/script-engine'` 导入类型。
+消费者通过 `import type { ScriptMetadata } from '@coding-script/script-engine'` 导入类型。`components/` 和 `type-panel/` 内部模块不在顶层导出（属于实现细节）。
 
 ## 主题
 
 `dark` 和 `light` 两套配色。编辑器主题、自动补全弹窗主题、属性面板主题三者必须同步切换：
 
 - 编辑器：`oneDark` + 自定义 `darkHighlightStyle`
-- 弹窗：`buildAutocompleteTooltipTheme(theme)` 注入 `EditorView.theme()`
-- 属性面板：`themes[theme]` 配色 map
+- 弹窗：`buildThemeExtensions()` 中注入 `EditorView.theme()`
+- 属性面板：`themes[theme]` 配色 map（在 `components/theme-colors.ts` 中）
 
 ## 发布
 
