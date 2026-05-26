@@ -1,13 +1,16 @@
-import type {FormMeta} from "@coding-script/script-engine";
-import {createFormInstance, FormInstance, FormView} from "@coding-script/script-engine";
-import {Button, Space} from "antd";
-import type {CardLayout} from "@/layout/card-form-layout.tsx";
+import { GroovyCodeEditor } from "@coding-script/script-engine";
 
 const HomePage = () => {
 
     return (
         <div>
             <h1>Home Page</h1>
+            <GroovyCodeEditor
+                value={`println("Hello, World!")`}
+                onChange={(value) => {
+                    console.log("Code changed:", value);
+                }}
+            />
         </div>
     );
 };

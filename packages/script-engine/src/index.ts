@@ -1,1 +1,1 @@
-export {}
+export * from "./script-code";
