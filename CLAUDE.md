@@ -52,6 +52,8 @@ packages/script-engine/src/
 │   ├── theme-colors.ts       ← 共享配色 themes + ThemeColors + ensureScrollbarStyle
 │   ├── toolbar.tsx           ← 工具栏（标题 + 主题切换 + 编译验证）
 │   ├── toolbar-button.tsx    ← 工具栏按钮（通用）
+│   ├── format-icon.tsx       ← 格式化按钮图标
+│   ├── fullscreen-icon.tsx   ← 全屏按钮图标
 │   ├── expand-sidebar-button.tsx  ← 展开侧边栏按钮
 │   ├── drag-handle.tsx       ← 属性面板拖拽手柄
 │   ├── panel-header.tsx      ← 属性面板头部
@@ -70,6 +72,8 @@ packages/script-engine/src/
 ├── type-panel/               ← 属性面板主组件
 │   ├── index.ts
 │   └── type-panel.tsx        ← TypePanel 主组件（拖拽/排序/布局）
+├── utils/
+│   └── groovy-formatter.ts   ← Groovy 代码格式化工具函数
 ├── types/
 │   └── index.ts              ← 所有 TypeScript 接口
 ├── script-code.tsx           ← ScriptCodeEditor 主组件（CM 配置 + 布局）
@@ -134,7 +138,8 @@ packages/script-engine/src/
 
 ```ts
 ScriptMetadata {
-  mainMethod: string              // 主函数名（如 "run"）
+  mainMethod?: string             // 主函数名（如 "run"，可选）
+  description?: string            // 主函数描述信息（可选）
   binds: ScriptBindInfo[]         // 注入变量，如 $request（name 含 $ 前缀）
   requests: ScriptRequestInfo[]   // 主函数参数，如 request
   returnType?: string             // 主函数返回类型
@@ -144,6 +149,9 @@ ScriptMetadata {
 ScriptTypeInfo { dataType, description?, fields[], functions[] }
 ScriptFieldInfo { dataType, description?, name }
 ScriptFunctionInfo { name, parameters[], description?, returnType? }
+ScriptBindInfo { dataType, name, description? }
+ScriptRequestInfo { dataType, name, description? }
+ScriptParameterInfo { dataType, name, description? }
 ```
 
 `metadata` 是动态的（不同脚本有不同 schema），但结构固定。`metadata` 必须是**解析后的对象**（不能是 JSON 字符串），否则面板无数据。

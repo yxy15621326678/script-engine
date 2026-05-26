@@ -31,6 +31,7 @@ import type { ScriptMetadata } from '@coding-script/script-engine';
 
 const metadata: ScriptMetadata = {
   mainMethod: 'run',
+  description: '脚本主入口，接收请求参数并返回执行结果状态码',
   returnType: 'Integer',
   binds: [
     { dataType: 'GroovyBindObject', name: '$request' },
@@ -151,8 +152,10 @@ function App() {
 
 ```typescript
 interface ScriptMetadata {
-  /** 主函数名称 */
-  mainMethod: string;
+  /** 主函数名称（可选） */
+  mainMethod?: string;
+  /** 主函数描述信息（可选，提供后在属性面板主函数名旁显示悬浮提示） */
+  description?: string;
   /** 注入变量（如 $request，name 含 $ 前缀） */
   binds: ScriptBindInfo[];
   /** 主函数参数 */
@@ -241,4 +244,4 @@ pnpm run dev:app-pc
 
 ## License
 
-MIT
+Apache-2.0 license
