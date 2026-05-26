@@ -8,9 +8,11 @@
 - **Groovy 语法高亮**：基于 CodeMirror 6，支持完整的 Groovy/Java 语法着色
 - **动态类型自动补全**：基于 `ScriptMetadata` 提供变量名补全和点号链式访问补全（如 `request.test.name`）
 - **Groovy 语法提示**：内置 `if`/`for`/`while`/`println`/`return` 等常用 Groovy 语法片段
+- **代码格式化**：内置 Groovy 格式化器，也可通过 `onFormat` 自定义格式化逻辑
 - **属性面板**：右侧侧边栏展示主函数签名、变量、数据类型（字段和方法），支持折叠/展开和拖拽调节宽度
-- **主题切换**：暗色/亮色两套主题，编辑器、补全弹窗、属性面板同步切换
-- **编译验证**：工具栏提供编译验证按钮（通过回调函数对接后端 API）
+- **主题切换**：暗色/亮色两套主题，编辑器、补全弹窗、属性面板同步切换，编辑器内部管理主题状态
+- **全屏模式**：支持 CSS 全屏（`position: fixed` 覆盖视口），不影响编辑器内容
+- **自定义工具栏**：通过 `toolbarExtra` 传入任意 React 节点
 - **热更新**：主题和 metadata 变化时通过 Compartment 热更新，不重建编辑器，不丢失用户输入
 
 ## 安装
@@ -69,15 +71,17 @@ const metadata: ScriptMetadata = {
 };
 
 function App() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
   return (
     <ScriptCodeEditor
       value="def run(request){\n    return request.count;\n}\n"
       title="Groovy 脚本编辑器"
-      theme={theme}
+      defaultTheme="dark"
       metadata={metadata}
-      onThemeChange={(next) => setTheme(next)}
+      enableThemeToggle
+      enableFormat
+      enableCompile
+      enableFullscreen
+      onThemeChange={(theme) => console.log('主题切换:', theme)}
       onChange={(code) => console.log('代码变化:', code)}
       onCompile={(code) => console.log('编译验证:', code)}
       options={{ minHeight: 400, maxHeight: 500 }}
@@ -93,13 +97,52 @@ function App() {
 | `value` | `string` | `undefined` | 代码内容 |
 | `readonly` | `boolean` | `false` | 是否只读 |
 | `onChange` | `(value: string) => void` | `undefined` | 代码变化回调 |
-| `onCompile` | `(code: string) => void` | `undefined` | 编译验证回调 |
-| `onThemeChange` | `(theme: 'dark' \| 'light') => void` | `undefined` | 主题切换回调 |
 | `placeholder` | `string` | `'请输入 Groovy 脚本...'` | 空内容占位符 |
-| `theme` | `'dark' \| 'light'` | `'dark'` | 当前主题 |
-| `title` | `string` | `undefined` | 工具栏标题（可选） |
+| `defaultTheme` | `'dark' \| 'light'` | `'dark'` | 初始主题，编辑器内部管理状态 |
+| `onThemeChange` | `(theme: 'dark' \| 'light') => void` | `undefined` | 主题切换通知回调 |
+| `title` | `string` | `undefined` | 工具栏标题 |
 | `metadata` | `ScriptMetadata` | `undefined` | 脚本元数据，提供后启用属性面板和自动补全 |
 | `defaultSidebarOpen` | `boolean` | `metadata != null` | 属性面板默认是否展开 |
+
+### 工具栏按钮控制
+
+所有工具栏按钮默认**禁用**，需通过 `enable*` 标志显式开启：
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `enableThemeToggle` | `boolean` | `false` | 是否显示主题切换按钮 |
+| `enableFormat` | `boolean` | `false` | 是否显示格式化按钮（需配合 `onFormat`） |
+| `enableCompile` | `boolean` | `false` | 是否显示编译验证按钮（需配合 `onCompile`） |
+| `enableFullscreen` | `boolean` | `false` | 是否显示全屏按钮 |
+
+### 按钮回调
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `onFormat` | `() => void` | `undefined` | 格式化代码回调（不提供时使用内置 Groovy 格式化器） |
+| `onCompile` | `(code: string) => void` | `undefined` | 编译/测试脚本回调 |
+
+### 自定义工具栏
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `toolbarExtra` | `React.ReactNode` | `undefined` | 工具栏额外内容，渲染在内置按钮之后，可传入任意 JSX |
+
+```tsx
+<ScriptCodeEditor
+  toolbarExtra={
+    <>
+      <button onClick={save}>💾 保存</button>
+      <button onClick={help}>❓ 帮助</button>
+    </>
+  }
+/>
+```
+
+### 布局选项
+
+| 属性 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
 | `options.fontSize` | `number` | `14` | 字体大小（px） |
 | `options.minHeight` | `number` | `300` | 编辑器最小高度（px） |
 | `options.maxHeight` | `number` | `300` | 编辑器最大高度（px） |

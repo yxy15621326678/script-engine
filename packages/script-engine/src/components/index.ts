@@ -26,3 +26,4 @@ export { VariablesSection } from './variables-section';
 export type { VariablesSectionProps } from './variables-section';
 export { DataTypesSection } from './data-types-section';
 export type { DataTypesSectionProps } from './data-types-section';
+export { MaximizeIcon, MinimizeIcon } from './fullscreen-icon';

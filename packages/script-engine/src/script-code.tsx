@@ -40,6 +40,7 @@ import { createGroovyCompletionSource, createGroovyKeywordSource } from './autoc
 import { TypePanel } from './type-panel';
 import { Toolbar } from './components/toolbar';
 import { ExpandSidebarButton } from './components/expand-sidebar-button';
+import { GroovyFormatter } from './utils/groovy-formatter';
 
 const darkHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#c678dd' },
@@ -123,27 +124,74 @@ function buildAutocompleteExt(metadata: ScriptCodeEditorProps['metadata']): Exte
       });
 }
 
+/** 构建布局扩展 — 全屏时取消高度限制 */
+function buildLayoutExtensions(
+  fontSize: number,
+  minHeight: number,
+  maxHeight: number,
+  isFullscreen: boolean
+): Extension {
+  if (isFullscreen) {
+    return EditorView.theme({
+      '&': { fontSize: `${fontSize}px`, height: '100%' },
+      '.cm-scroller': {
+        overflow: 'auto',
+        flex: '1',
+        minHeight: '0',
+      },
+      '.cm-content': { fontFamily: 'monospace' },
+    });
+  }
+  return EditorView.theme({
+    '&': { fontSize: `${fontSize}px` },
+    '.cm-scroller': {
+      overflow: 'auto',
+      minHeight: `${minHeight}px`,
+      maxHeight: `${maxHeight}px`,
+    },
+    '.cm-content': { fontFamily: 'monospace', minHeight: `${minHeight}px` },
+    '.cm-gutters': { minHeight: `${minHeight}px` },
+  });
+}
+
 export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   const {
     value,
     readonly = false,
     onChange,
     onCompile,
+    onFormat,
     onThemeChange,
     placeholder = '请输入 Groovy 脚本...',
-    theme = 'dark',
+    defaultTheme,
     title,
     metadata,
     defaultSidebarOpen,
+    enableThemeToggle,
+    enableFormat,
+    enableCompile,
+    enableFullscreen,
+    toolbarExtra,
     options = {},
   } = props;
 
   const { fontSize = 14, minHeight = 300, maxHeight = 300 } = options;
 
+  // 内部主题状态（prop 仅作初始值）
+  const [internalTheme, setInternalTheme] = useState<'dark' | 'light'>(defaultTheme ?? 'dark');
+
+  // 外部 defaultTheme prop 变化时同步内部状态
+  useEffect(() => {
+    if (defaultTheme !== undefined) {
+      setInternalTheme(defaultTheme);
+    }
+  }, [defaultTheme]);
+
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const themeCompartmentRef = useRef(new Compartment());
   const autocompleteCompartmentRef = useRef(new Compartment());
+  const layoutCompartmentRef = useRef(new Compartment());
 
   // 用 ref 持有回调，避免闭包过期
   const onChangeRef = useRef(onChange);
@@ -157,12 +205,35 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   );
   const [panelWidth, setPanelWidth] = useState(300);
 
+  // 全屏状态
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // ── 全屏时锁定 body 滚动 ──────────────────────────────
+  useEffect(() => {
+    if (isFullscreen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = prev; };
+    }
+  }, [isFullscreen]);
+
+  // ── ESC 键退出全屏 ──────────────────────────────────────
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
   // ── 创建编辑器（仅在首次挂载和布局属性变化时） ──────────
   useEffect(() => {
     if (!editorContainerRef.current) return;
 
     const themeCompartment = themeCompartmentRef.current;
     const acCompartment = autocompleteCompartmentRef.current;
+    const layoutCompartment = layoutCompartmentRef.current;
 
     const extensions: Extension[] = [
       lineNumbers(),
@@ -192,18 +263,10 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
           onChangeRef.current(update.state.doc.toString());
         }
       }),
-      EditorView.theme({
-        '&': { fontSize: `${fontSize}px` },
-        '.cm-scroller': {
-          overflow: 'auto',
-          minHeight: `${minHeight}px`,
-          maxHeight: `${maxHeight}px`,
-        },
-        '.cm-content': { fontFamily: 'monospace', minHeight: `${minHeight}px` },
-        '.cm-gutters': { minHeight: `${minHeight}px` },
-      }),
+      // 布局扩展放入 compartment，全屏时热更新高度约束
+      layoutCompartment.of(buildLayoutExtensions(fontSize, minHeight, maxHeight, false)),
       // 主题相关扩展放入 compartment，热更新不重建编辑器
-      themeCompartment.of(buildThemeExtensions(theme)),
+      themeCompartment.of(buildThemeExtensions(internalTheme)),
       // 自动补全放入 compartment
       acCompartment.of(buildAutocompleteExt(metadataRef.current)),
     ];
@@ -238,10 +301,10 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     if (!viewRef.current) return;
     viewRef.current.dispatch({
       effects: themeCompartmentRef.current.reconfigure(
-        buildThemeExtensions(theme)
+        buildThemeExtensions(internalTheme)
       ),
     });
-  }, [theme]);
+  }, [internalTheme]);
 
   // ── metadata 变化时热更新补全源 ──────────────────────────
   useEffect(() => {
@@ -253,8 +316,21 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     });
   }, [metadata]);
 
+  // ── 全屏/尺寸变化时热更新布局约束（不重建编辑器） ────────
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: layoutCompartmentRef.current.reconfigure(
+        buildLayoutExtensions(fontSize, minHeight, maxHeight, isFullscreen)
+      ),
+    });
+    requestAnimationFrame(() => {
+      viewRef.current?.requestMeasure();
+    });
+  }, [isFullscreen, fontSize, minHeight, maxHeight]);
+
   // ── 渲染 ──────────────────────────────────────────────────
-  const isDark = theme === 'dark';
+  const isDark = internalTheme === 'dark';
   const borderColor = isDark ? '#434343' : '#d9d9d9';
   const expandBtnBg = isDark ? '#2c313a' : '#f0f0f0';
   const expandBtnColor = isDark ? '#abb2bf' : '#666';
@@ -265,14 +341,53 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     }
   };
 
+  const handleFormat = () => {
+    if (viewRef.current) {
+      const code = viewRef.current.state.doc.toString();
+      const formatted = GroovyFormatter.formatScript(code);
+      if (formatted !== code) {
+        viewRef.current.dispatch({
+          changes: { from: 0, to: viewRef.current.state.doc.length, insert: formatted },
+        });
+      }
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div
+      style={
+        isFullscreen
+          ? {
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 9999,
+              backgroundColor: isDark ? '#21252b' : '#ffffff',
+              display: 'flex',
+              flexDirection: 'column',
+            }
+          : { display: 'flex', flexDirection: 'column' }
+      }
+    >
       {/* ── 工具栏 ─────────────────────────────────────── */}
       <Toolbar
         title={title}
-        theme={theme}
-        onThemeChange={onThemeChange}
+        theme={internalTheme}
+        onThemeChange={(next) => {
+          setInternalTheme(next);
+          onThemeChange?.(next);
+        }}
+        enableThemeToggle={enableThemeToggle}
+        enableFormat={enableFormat}
+        onFormat={readonly ? undefined : (onFormat ?? handleFormat)}
+        enableCompile={enableCompile}
         onCompile={onCompile ? handleCompile : undefined}
+        enableFullscreen={enableFullscreen}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+        toolbarExtra={toolbarExtra}
       />
 
       {/* ── 编辑器 + 侧边栏 ───────────────────────────── */}
@@ -281,8 +396,10 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
           display: 'flex',
           border: `1px solid ${borderColor}`,
           borderTop: 'none',
-          borderRadius: '0 0 6px 6px',
+          borderRadius: isFullscreen ? 0 : '0 0 6px 6px',
           overflow: 'hidden',
+          flex: isFullscreen ? 1 : undefined,
+          minHeight: isFullscreen ? 0 : undefined,
         }}
       >
         <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
@@ -294,14 +411,17 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
               onClick={() => setSidebarOpen(true)}
             />
           )}
-          <div ref={editorContainerRef} />
+          <div
+            ref={editorContainerRef}
+            style={isFullscreen ? { height: '100%' } : undefined}
+          />
         </div>
         {metadata && sidebarOpen && (
           <TypePanel
             metadata={metadata}
-            theme={theme}
-            minHeight={minHeight}
-            maxHeight={maxHeight}
+            theme={internalTheme}
+            minHeight={isFullscreen ? undefined : minHeight}
+            maxHeight={isFullscreen ? undefined : maxHeight}
             width={panelWidth}
             onWidthChange={setPanelWidth}
             onCollapse={() => setSidebarOpen(false)}

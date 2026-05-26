@@ -1,3 +1,5 @@
+import type React from 'react';
+
 // ── 脚本元数据 Schema ──────────────────────────────────────────
 
 /** 函数参数信息 */
@@ -87,20 +89,39 @@ export interface ScriptCodeEditorProps {
   readonly?: boolean;
   /** 代码变化回调 */
   onChange?: (value: string) => void;
-  /** 编译/测试脚本回调（后续接入 API） */
-  onCompile?: (code: string) => void;
-  /** 主题切换回调 */
-  onThemeChange?: (theme: 'dark' | 'light') => void;
   /** 占位符 */
   placeholder?: string;
-  /** 主题 */
-  theme?: 'dark' | 'light';
+  /** 初始主题（默认 'dark'），编辑器内部管理状态 */
+  defaultTheme?: 'dark' | 'light';
+  /** 主题切换通知回调（可选） */
+  onThemeChange?: (theme: 'dark' | 'light') => void;
   /** 标题（可选） */
   title?: string;
   /** 脚本元数据 — 提供后启用类型面板和自动补全 */
   metadata?: ScriptMetadata;
   /** 类型面板侧边栏默认是否展开（默认：提供 metadata 时为 true） */
   defaultSidebarOpen?: boolean;
+
+  // ── 工具栏按钮开关（全部默认 false） ─────────────────────
+  /** 是否显示主题切换按钮（默认 false） */
+  enableThemeToggle?: boolean;
+  /** 是否显示格式化按钮（默认 false，需配合 onFormat 使用） */
+  enableFormat?: boolean;
+  /** 是否显示编译验证按钮（默认 false，需配合 onCompile 使用） */
+  enableCompile?: boolean;
+  /** 是否显示全屏按钮（默认 false） */
+  enableFullscreen?: boolean;
+
+  // ── 按钮回调 ─────────────────────────────────────────────
+  /** 格式化代码回调（enableFormat 时需提供） */
+  onFormat?: () => void;
+  /** 编译/测试脚本回调（enableCompile 时需提供） */
+  onCompile?: (code: string) => void;
+
+  // ── 自定义工具栏内容 ──────────────────────────────────────
+  /** 工具栏额外内容（渲染在内置按钮之后，任意 React 节点） */
+  toolbarExtra?: React.ReactNode;
+
   /** 其他选项 */
   options?: {
     /** 字体大小 */

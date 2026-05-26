@@ -14,8 +14,8 @@ import { DataTypesSection } from '../components/data-types-section';
 export interface TypePanelProps {
   metadata: ScriptMetadata;
   theme: 'dark' | 'light';
-  minHeight: number;
-  maxHeight: number;
+  minHeight?: number;
+  maxHeight?: number;
   width: number;
   onWidthChange: (width: number) => void;
   onCollapse: () => void;
@@ -119,8 +119,8 @@ export const TypePanel: React.FC<TypePanelProps> = ({
         display: 'flex',
         flexDirection: 'row',
         overflow: 'hidden',
-        minHeight: `${minHeight}px`,
-        maxHeight: `${maxHeight}px`,
+        minHeight: minHeight != null ? `${minHeight}px` : undefined,
+        maxHeight: maxHeight != null ? `${maxHeight}px` : undefined,
         position: 'relative',
       }}
     >

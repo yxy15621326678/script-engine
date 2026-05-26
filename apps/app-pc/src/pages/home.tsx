@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ScriptCodeEditor } from '@coding-script/script-engine';
 import type { ScriptMetadata } from '@coding-script/script-engine';
 import { message } from 'antd';
@@ -12,24 +11,25 @@ const sampleCode = `def run(request){
 `;
 
 const HomePage = () => {
-  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   return (
     <div
       style={{
         padding: 24,
         minHeight: '100vh',
-        background: theme === 'dark' ? '#1e1e1e' : '#f5f5f5',
         transition: 'background 0.3s',
       }}
     >
       <ScriptCodeEditor
         value={sampleCode}
         title="Groovy 脚本编辑器"
-        theme={theme}
+        defaultTheme="light"
         metadata={sampleMetadata}
-        onThemeChange={(nextTheme) => setTheme(nextTheme)}
-        onCompile={(code) => {
+        enableThemeToggle
+        enableFormat
+        enableCompile
+        enableFullscreen
+        onCompile={(code:string) => {
           console.log('编译脚本:', code);
           message.success('脚本编译测试已提交');
         }}
@@ -37,6 +37,7 @@ const HomePage = () => {
           console.log('Code changed:', value);
         }}
         options={{ minHeight: 400, maxHeight: 500 }}
+        toolbarExtra={<div style={{ marginLeft: 16, color: '#888' }}>这是额外的工具栏内容</div>}
       />
     </div>
   );
