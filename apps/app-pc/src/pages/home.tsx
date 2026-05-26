@@ -1,13 +1,13 @@
-import { GroovyCodeEditor } from "@coding-script/script-engine";
+import { ScriptCodeEditor } from "@coding-script/script-engine";
 
 const HomePage = () => {
 
     return (
         <div>
             <h1>Home Page</h1>
-            <GroovyCodeEditor
+            <ScriptCodeEditor
                 value={`println("Hello, World!")`}
-                onChange={(value) => {
+                onChange={(value: string) => {
                     console.log("Code changed:", value);
                 }}
             />

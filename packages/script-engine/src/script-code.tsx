@@ -26,19 +26,8 @@ import {
 import {java} from '@codemirror/lang-java';
 import {oneDark} from '@codemirror/theme-one-dark';
 import {tags} from '@lezer/highlight';
+import { ScriptCodeEditorProps } from './types';
 
-interface GroovyCodeEditorProps {
-    value?: string;
-    readonly?: boolean;
-    onChange?: (value: string) => void;
-    placeholder?: string;
-    theme?: 'dark' | 'light';
-    options?: {
-        fontSize?: number;
-        minHeight?: number;
-        maxHeight?: number;
-    };
-}
 
 const darkHighlightStyle = HighlightStyle.define([
     {tag: tags.keyword, color: '#c678dd'},
@@ -57,7 +46,7 @@ const darkHighlightStyle = HighlightStyle.define([
     {tag: tags.annotation, color: '#d19a66'},
 ]);
 
-export const GroovyCodeEditor: React.FC<GroovyCodeEditorProps> = (props) => {
+export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     const {
         value,
         readonly = false,
