@@ -1,3 +1,4 @@
+[![npm](https://img.shields.io/npm/v/@coding-script/script-engine.svg)](https://www.npmjs.com/package/@coding-script/script-engine)
 # Script Engine
 
 基于 React + CodeMirror 6 的 Groovy 脚本编辑器组件库，提供语法高亮、动态类型自动补全、属性面板等功能。
