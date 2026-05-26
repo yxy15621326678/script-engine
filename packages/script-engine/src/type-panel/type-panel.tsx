@@ -23,7 +23,7 @@ export interface TypePanelProps {
 
 // ── 宽度约束 ──────────────────────────────────────────────────
 
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 300;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 600;
 

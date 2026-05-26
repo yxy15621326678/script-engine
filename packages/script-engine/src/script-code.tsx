@@ -155,7 +155,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   const [sidebarOpen, setSidebarOpen] = useState(
     defaultSidebarOpen ?? (metadata != null)
   );
-  const [panelWidth, setPanelWidth] = useState(260);
+  const [panelWidth, setPanelWidth] = useState(300);
 
   // ── 创建编辑器（仅在首次挂载和布局属性变化时） ──────────
   useEffect(() => {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export interface ToolbarButtonProps {
-  label: string;
+  label: React.ReactNode;
   title: string;
   bg: string;
   hoverBg: string;
@@ -18,6 +18,9 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({ label, title, bg, 
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
         background: hovered ? hoverBg : bg,
         border: `1px solid ${border}`,
         color,
