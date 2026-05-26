@@ -72,8 +72,10 @@ export interface ScriptMetadata {
   binds: ScriptBindInfo[];
   // 主函数参数（如 request）
   requests: ScriptRequestInfo[];
+  // 脚本描述信息（可选）
+  description?: string;
   // 主函数名称
-  mainMethod: string;
+  mainMethod?: string;
   // 主函数返回类型（可选）
   returnType?: string;
   // 数据类型定义
