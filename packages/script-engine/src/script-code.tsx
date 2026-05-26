@@ -1,154 +1,417 @@
-import React, {useEffect, useRef} from 'react';
-import {EditorState} from '@codemirror/state';
+import React, { useEffect, useRef, useState } from 'react';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import {
-    crosshairCursor,
-    drawSelection,
-    dropCursor,
-    EditorView,
-    highlightActiveLine,
-    highlightActiveLineGutter,
-    highlightSpecialChars,
-    keymap,
-    lineNumbers,
-    placeholder as cmPlaceholder,
-    rectangularSelection
+  crosshairCursor,
+  drawSelection,
+  dropCursor,
+  EditorView,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  keymap,
+  lineNumbers,
+  placeholder as cmPlaceholder,
+  rectangularSelection,
 } from '@codemirror/view';
-import {defaultKeymap, history, historyKeymap, indentWithTab} from '@codemirror/commands';
 import {
-    bracketMatching,
-    defaultHighlightStyle,
-    foldGutter,
-    foldKeymap,
-    HighlightStyle,
-    indentOnInput,
-    syntaxHighlighting
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from '@codemirror/commands';
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  HighlightStyle,
+  indentOnInput,
+  syntaxHighlighting,
 } from '@codemirror/language';
-import {java} from '@codemirror/lang-java';
-import {oneDark} from '@codemirror/theme-one-dark';
-import {tags} from '@lezer/highlight';
+import { java } from '@codemirror/lang-java';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { tags } from '@lezer/highlight';
+import {
+  autocompletion,
+  completionKeymap,
+} from '@codemirror/autocomplete';
 import { ScriptCodeEditorProps } from './types';
-
+import { createGroovyCompletionSource, createGroovyKeywordSource } from './autocomplete';
+import { TypePanel } from './type-panel';
 
 const darkHighlightStyle = HighlightStyle.define([
-    {tag: tags.keyword, color: '#c678dd'},
-    {tag: tags.operator, color: '#56b6c2'},
-    {tag: tags.variableName, color: '#e5c07b'},
-    {tag: tags.string, color: '#98c379'},
-    {tag: tags.comment, color: '#5c6370', fontStyle: 'italic'},
-    {tag: tags.number, color: '#d19a66'},
-    {tag: tags.bool, color: '#d19a66'},
-    {tag: tags.null, color: '#d19a66'},
-    {tag: tags.propertyName, color: '#e06c75'},
-    {tag: tags.function(tags.variableName), color: '#61afef'},
-    {tag: tags.definition(tags.variableName), color: '#e5c07b'},
-    {tag: tags.typeName, color: '#e5c07b'},
-    {tag: tags.className, color: '#e5c07b'},
-    {tag: tags.annotation, color: '#d19a66'},
+  { tag: tags.keyword, color: '#c678dd' },
+  { tag: tags.operator, color: '#56b6c2' },
+  { tag: tags.variableName, color: '#e5c07b' },
+  { tag: tags.string, color: '#98c379' },
+  { tag: tags.comment, color: '#5c6370', fontStyle: 'italic' },
+  { tag: tags.number, color: '#d19a66' },
+  { tag: tags.bool, color: '#d19a66' },
+  { tag: tags.null, color: '#d19a66' },
+  { tag: tags.propertyName, color: '#e06c75' },
+  { tag: tags.function(tags.variableName), color: '#61afef' },
+  { tag: tags.definition(tags.variableName), color: '#e5c07b' },
+  { tag: tags.typeName, color: '#e5c07b' },
+  { tag: tags.className, color: '#e5c07b' },
+  { tag: tags.annotation, color: '#d19a66' },
 ]);
 
+function buildThemeExtensions(theme: 'dark' | 'light'): Extension[] {
+  const isDark = theme === 'dark';
+  const exts: Extension[] = [];
+
+  if (isDark) {
+    exts.push(oneDark);
+    exts.push(syntaxHighlighting(darkHighlightStyle));
+  } else {
+    exts.push(syntaxHighlighting(defaultHighlightStyle));
+  }
+
+  exts.push(
+    EditorView.theme({
+      '.cm-tooltip.cm-tooltip-autocomplete': {
+        backgroundColor: isDark ? '#21252b' : '#ffffff',
+        borderColor: isDark ? '#434343' : '#d9d9d9',
+        borderRadius: '4px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        overflow: 'hidden',
+      },
+      '.cm-tooltip-autocomplete > ul > li': {
+        padding: '4px 8px',
+        color: isDark ? '#abb2bf' : '#333',
+      },
+      '.cm-tooltip-autocomplete > ul > li[aria-selected]': {
+        backgroundColor: isDark ? '#2c313a' : '#e6f4ff',
+        color: isDark ? '#fff' : '#000',
+      },
+      '.cm-completionLabel': { fontFamily: 'monospace' },
+      '.cm-completionDetail': {
+        color: isDark ? '#7f848e' : '#888',
+        fontStyle: 'normal',
+        marginLeft: '8px',
+      },
+      '.cm-completionInfo': {
+        backgroundColor: isDark ? '#282c34' : '#fafafa',
+        borderColor: isDark ? '#434343' : '#d9d9d9',
+        color: isDark ? '#abb2bf' : '#333',
+        padding: '6px 8px',
+      },
+      '.cm-completionIcon': { width: '1.2em', fontSize: '0.9em', paddingRight: '4px' },
+      '.cm-completionIcon-property::after': { content: '"F"', color: '#61afef' },
+      '.cm-completionIcon-function::after': { content: '"M"', color: '#c678dd' },
+      '.cm-completionIcon-variable::after': { content: '"V"', color: '#e5c07b' },
+      '.cm-completionIcon-keyword::after': { content: '"K"', color: '#56b6c2' },
+    })
+  );
+
+  return exts;
+}
+
+function buildAutocompleteExt(metadata: ScriptCodeEditorProps['metadata']): Extension {
+  return metadata
+    ? autocompletion({
+        override: [createGroovyCompletionSource(metadata)],
+        activateOnTyping: true,
+        icons: true,
+      })
+    : autocompletion({
+        override: [createGroovyKeywordSource()],
+        activateOnTyping: true,
+        icons: true,
+      });
+}
+
 export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
-    const {
-        value,
-        readonly = false,
-        onChange,
-        placeholder = '请输入 Groovy 脚本...',
-        theme = 'dark',
-        options = {}
-    } = props;
+  const {
+    value,
+    readonly = false,
+    onChange,
+    onCompile,
+    onThemeChange,
+    placeholder = '请输入 Groovy 脚本...',
+    theme = 'dark',
+    title,
+    metadata,
+    defaultSidebarOpen,
+    options = {},
+  } = props;
 
-    const editorRef = useRef<HTMLDivElement>(null);
-    const viewRef = useRef<EditorView | null>(null);
+  const { fontSize = 14, minHeight = 300, maxHeight = 300 } = options;
 
-    const {fontSize = 14, minHeight = 300, maxHeight = 300} = options;
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const themeCompartmentRef = useRef(new Compartment());
+  const autocompleteCompartmentRef = useRef(new Compartment());
 
-    useEffect(() => {
-        if (!editorRef.current) return;
+  // 用 ref 持有回调，避免闭包过期
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+  const metadataRef = useRef(metadata);
+  metadataRef.current = metadata;
 
-        const extensions = [
-            lineNumbers(),
-            highlightActiveLineGutter(),
-            highlightSpecialChars(),
-            history(),
-            foldGutter(),
-            drawSelection(),
-            dropCursor(),
-            EditorState.allowMultipleSelections.of(true),
-            indentOnInput(),
-            bracketMatching(),
-            rectangularSelection(),
-            crosshairCursor(),
-            highlightActiveLine(),
-            keymap.of([
-                ...defaultKeymap,
-                ...historyKeymap,
-                ...foldKeymap,
-                indentWithTab,
-            ]),
-            java(),
-            cmPlaceholder(placeholder),
-            EditorView.updateListener.of((update) => {
-                if (update.docChanged && onChange) {
-                    onChange(update.state.doc.toString());
-                }
-            }),
-            EditorView.theme({
-                '&': {
-                    fontSize: `${fontSize}px`,
-                },
-                '.cm-scroller': {
-                    overflow: 'auto',
-                    minHeight: `${minHeight}px`,
-                    maxHeight: `${maxHeight}px`,
-                },
-                '.cm-content': {
-                    fontFamily: 'monospace',
-                    minHeight: `${minHeight}px`,
-                },
-                '.cm-gutters': {
-                    minHeight: `${minHeight}px`,
-                },
-            }),
-        ];
+  // 侧边栏状态
+  const [sidebarOpen, setSidebarOpen] = useState(
+    defaultSidebarOpen ?? (metadata != null)
+  );
+  const [expandBtnHovered, setExpandBtnHovered] = useState(false);
 
-        if (theme === 'dark') {
-            extensions.push(oneDark);
-            extensions.push(syntaxHighlighting(darkHighlightStyle));
-        } else {
-            extensions.push(syntaxHighlighting(defaultHighlightStyle));
+  // ── 创建编辑器（仅在首次挂载和布局属性变化时） ──────────
+  useEffect(() => {
+    if (!editorContainerRef.current) return;
+
+    const themeCompartment = themeCompartmentRef.current;
+    const acCompartment = autocompleteCompartmentRef.current;
+
+    const extensions: Extension[] = [
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      highlightSpecialChars(),
+      history(),
+      foldGutter(),
+      drawSelection(),
+      dropCursor(),
+      EditorState.allowMultipleSelections.of(true),
+      indentOnInput(),
+      bracketMatching(),
+      rectangularSelection(),
+      crosshairCursor(),
+      highlightActiveLine(),
+      keymap.of([
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        indentWithTab,
+      ]),
+      java(),
+      cmPlaceholder(placeholder),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged && onChangeRef.current) {
+          onChangeRef.current(update.state.doc.toString());
         }
+      }),
+      EditorView.theme({
+        '&': { fontSize: `${fontSize}px` },
+        '.cm-scroller': {
+          overflow: 'auto',
+          minHeight: `${minHeight}px`,
+          maxHeight: `${maxHeight}px`,
+        },
+        '.cm-content': { fontFamily: 'monospace', minHeight: `${minHeight}px` },
+        '.cm-gutters': { minHeight: `${minHeight}px` },
+      }),
+      // 主题相关扩展放入 compartment，热更新不重建编辑器
+      themeCompartment.of(buildThemeExtensions(theme)),
+      // 自动补全放入 compartment
+      acCompartment.of(buildAutocompleteExt(metadataRef.current)),
+    ];
 
-        if (readonly) {
-            extensions.push(EditorState.readOnly.of(true));
-        }
+    if (readonly) {
+      extensions.push(EditorState.readOnly.of(true));
+    }
 
-        const state = EditorState.create({
-            doc: value,
-            extensions,
-        });
+    const state = EditorState.create({ doc: value, extensions });
+    const view = new EditorView({ state, parent: editorContainerRef.current });
+    viewRef.current = view;
 
-        const view = new EditorView({
-            state,
-            parent: editorRef.current,
-        });
+    return () => { view.destroy(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fontSize, minHeight, maxHeight, placeholder, readonly]);
 
-        viewRef.current = view;
+  // ── 同步外部 value 变化 ──────────────────────────────────
+  useEffect(() => {
+    if (viewRef.current && value !== viewRef.current.state.doc.toString()) {
+      viewRef.current.dispatch({
+        changes: {
+          from: 0,
+          to: viewRef.current.state.doc.length,
+          insert: value,
+        },
+      });
+    }
+  }, [value]);
 
-        return () => {
-            view.destroy();
-        };
-    }, [theme, fontSize, minHeight, maxHeight, placeholder, readonly]);
+  // ── theme 变化时热更新（不重建编辑器） ──────────────────
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: themeCompartmentRef.current.reconfigure(
+        buildThemeExtensions(theme)
+      ),
+    });
+  }, [theme]);
 
-    useEffect(() => {
-        if (viewRef.current && value !== viewRef.current.state.doc.toString()) {
-            viewRef.current.dispatch({
-                changes: {
-                    from: 0,
-                    to: viewRef.current.state.doc.length,
-                    insert: value,
-                },
-            });
-        }
-    }, [value]);
+  // ── metadata 变化时热更新补全源 ──────────────────────────
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: autocompleteCompartmentRef.current.reconfigure(
+        buildAutocompleteExt(metadata)
+      ),
+    });
+  }, [metadata]);
 
-    return <div ref={editorRef} style={{border: '1px solid #434343', borderRadius: 6, overflow: 'hidden'}}/>;
+  // ── 渲染 ──────────────────────────────────────────────────
+  const isDark = theme === 'dark';
+  const borderColor = isDark ? '#434343' : '#d9d9d9';
+  const toolbarBg = isDark ? '#282c34' : '#fafafa';
+  const toolbarText = isDark ? '#abb2bf' : '#333';
+  const btnBg = isDark ? '#2c313a' : '#f0f0f0';
+  const btnHoverBg = isDark ? '#3e4451' : '#e0e0e0';
+  const expandBtnBg = isDark ? '#2c313a' : '#f0f0f0';
+  const expandBtnColor = isDark ? '#abb2bf' : '#666';
+
+  const handleCompile = () => {
+    if (onCompile && viewRef.current) {
+      onCompile(viewRef.current.state.doc.toString());
+    }
+  };
+
+  const handleThemeToggle = () => {
+    const next = isDark ? 'light' : 'dark';
+    onThemeChange?.(next);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {/* ── 工具栏 ─────────────────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '6px 12px',
+          backgroundColor: toolbarBg,
+          borderBottom: `1px solid ${borderColor}`,
+          borderRadius: '6px 6px 0 0',
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          fontSize: 13,
+        }}
+      >
+        {title && (
+          <span
+            style={{
+              color: toolbarText,
+              fontWeight: 600,
+              marginRight: 'auto',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {title}
+          </span>
+        )}
+        {!title && <span style={{ marginRight: 'auto' }} />}
+
+        <ToolbarButton
+          label={isDark ? '☀ 浅色' : '🌙 深色'}
+          title={isDark ? '切换到浅色主题' : '切换到深色主题'}
+          bg={btnBg}
+          hoverBg={btnHoverBg}
+          color={toolbarText}
+          border={borderColor}
+          onClick={handleThemeToggle}
+        />
+
+        {onCompile && (
+          <ToolbarButton
+            label="▶ 编译测试"
+            title="编译并测试脚本"
+            bg={isDark ? '#2d5a27' : '#e6f4e5'}
+            hoverBg={isDark ? '#3a7033' : '#d4ecd3'}
+            color={isDark ? '#98c379' : '#389e0d'}
+            border={isDark ? '#2d5a27' : '#b7eb8f'}
+            onClick={handleCompile}
+          />
+        )}
+      </div>
+
+      {/* ── 编辑器 + 侧边栏 ───────────────────────────── */}
+      <div
+        style={{
+          display: 'flex',
+          border: `1px solid ${borderColor}`,
+          borderTop: 'none',
+          borderRadius: '0 0 6px 6px',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          {metadata && !sidebarOpen && (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              onMouseEnter={() => setExpandBtnHovered(true)}
+              onMouseLeave={() => setExpandBtnHovered(false)}
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                zIndex: 10,
+                background: expandBtnHovered ? expandBtnBg : 'transparent',
+                border: `1px solid ${borderColor}`,
+                color: expandBtnColor,
+                cursor: 'pointer',
+                fontSize: 12,
+                padding: '3px 6px',
+                borderRadius: 3,
+                lineHeight: 1,
+                opacity: expandBtnHovered ? 1 : 0.6,
+                transition: 'opacity 0.2s, background 0.2s',
+              }}
+              title="展开属性面板"
+            >
+              属性面板 ◀
+            </button>
+          )}
+          <div ref={editorContainerRef} />
+        </div>
+        {metadata && sidebarOpen && (
+          <TypePanel
+            metadata={metadata}
+            theme={theme}
+            minHeight={minHeight}
+            maxHeight={maxHeight}
+            onCollapse={() => setSidebarOpen(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── 工具栏按钮子组件 ──────────────────────────────────────────
+
+const ToolbarButton: React.FC<{
+  label: string;
+  title: string;
+  bg: string;
+  hoverBg: string;
+  color: string;
+  border: string;
+  onClick: () => void;
+}> = ({ label, title, bg, hoverBg, color, border, onClick }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: hovered ? hoverBg : bg,
+        border: `1px solid ${border}`,
+        color,
+        cursor: 'pointer',
+        fontSize: 12,
+        padding: '4px 10px',
+        borderRadius: 4,
+        lineHeight: 1.4,
+        whiteSpace: 'nowrap',
+        transition: 'background 0.15s',
+      }}
+      title={title}
+    >
+      {label}
+    </button>
+  );
 };
