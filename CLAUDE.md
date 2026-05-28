@@ -50,20 +50,20 @@ packages/script-engine/src/
 ├── components/               ← 所有 UI 子组件（每个组件一个文件）
 │   ├── index.ts              ← barrel 导出
 │   ├── theme-colors.ts       ← 共享配色 themes + ThemeColors + ensureScrollbarStyle
-│   ├── toolbar.tsx           ← 工具栏（标题 + 主题切换 + 编译验证）
+│   ├── toolbar.tsx           ← 工具栏（标题 + 脚本说明 + 主题切换 + 编译验证 + 全屏）
 │   ├── toolbar-button.tsx    ← 工具栏按钮（通用）
 │   ├── format-icon.tsx       ← 格式化按钮图标
 │   ├── fullscreen-icon.tsx   ← 全屏按钮图标
 │   ├── expand-sidebar-button.tsx  ← 展开侧边栏按钮
 │   ├── drag-handle.tsx       ← 属性面板拖拽手柄
 │   ├── panel-header.tsx      ← 属性面板头部
-│   ├── section-header.tsx    ← 通用区块标题（复用 3 处）
-│   ├── variable-row.tsx      ← 变量行（binds/requests 复用）
+│   ├── section-header.tsx    ← 通用区块标题（支持 extra 插槽，复用 3 处）
+│   ├── variable-row.tsx      ← 变量行（函数入参/绑定参数复用）
 │   ├── field-row.tsx         ← 字段行
 │   ├── function-row.tsx      ← 方法行
 │   ├── type-section.tsx      ← 类型展开区块
-│   ├── main-function-section.tsx  ← 主函数展示区
-│   ├── variables-section.tsx ← 变量列表区
+│   ├── main-function-section.tsx  ← 主函数展示区（签名展示）
+│   ├── variables-section.tsx ← 函数入参 + 绑定参数列表区（分两个 SectionHeader 展示）
 │   └── data-types-section.tsx ← 数据类型列表区
 ├── autocomplete/             ← 自动补全逻辑
 │   ├── index.ts
@@ -80,7 +80,7 @@ packages/script-engine/src/
 └── index.ts                  ← 库入口
 ```
 
-**组件拆分原则**：每个子组件一个文件，导出组件和 Props 接口。`theme-colors.ts` 存放共享配色和全局样式注入函数。
+**组件拆分原则**：每个子组件一个文件，导出组件和 Props 接口。`theme-colors.ts` 存放共享配色和全局样式注入函数。`SectionHeader` 支持 `extra?: ReactNode` 插槽用于在标题右侧放置操作按钮。
 
 ## 关键架构
 
@@ -131,6 +131,7 @@ packages/script-engine/src/
 - 展示 metadata 中**所有**类型（包括 Integer/String 等基础类型）
 - 滚动容器必须设置 `minHeight: 0`（flex 布局关键修复）
 - 所有列表按 name 字母序排序（`localeCompare`）
+- **变量区域拆分为两个独立 SectionHeader**："函数入参"（`sortedRequests`）和"绑定参数"（`sortedBinds`），各自为空时不显示
 
 ### ScriptMetadata Schema (`src/types/index.ts`)
 
@@ -139,9 +140,9 @@ packages/script-engine/src/
 ```ts
 ScriptMetadata {
   mainMethod?: string             // 主函数名（如 "run"，可选）
-  description?: string            // 主函数描述信息（可选）
+  description?: string            // 脚本说明（可选，显示在工具栏"脚本说明"按钮弹框中）
   binds: ScriptBindInfo[]         // 注入变量，如 $request（name 含 $ 前缀）
-  requests: ScriptRequestInfo[]   // 主函数参数，如 request
+  requests: ScriptRequestInfo[]   // 主函数参数（函数入参），如 request
   returnType?: string             // 主函数返回类型
   types: Record<string, ScriptTypeInfo>  // 所有可用类型（含基础类型）
 }
@@ -155,6 +156,16 @@ ScriptParameterInfo { dataType, name, description? }
 ```
 
 `metadata` 是动态的（不同脚本有不同 schema），但结构固定。`metadata` 必须是**解析后的对象**（不能是 JSON 字符串），否则面板无数据。
+
+### 工具栏脚本说明 (`src/components/toolbar.tsx`)
+
+当 `metadata.description` 存在时，工具栏显示"脚本说明"按钮（带问号图标）：
+
+- 点击切换弹框显示/隐藏（非 hover 触发，便于复制内容）
+- 弹框使用 `fixed` 定位 + `calcTooltipPos()` 智能翻转（与属性面板 tooltip 共享定位逻辑）
+- 描述内容按 `\n` 分行渲染，自动识别 `key: value` 格式并高亮 key（使用 `colors.accent`）
+- `description` 消失时自动关闭弹框并重置位置
+- 兼容字面 `\n` 和真实换行符（通过 `.replace(/\\n/g, '\n')` 处理）
 
 ## 类型导出
 
