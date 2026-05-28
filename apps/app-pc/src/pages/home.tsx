@@ -1,8 +1,7 @@
 import { ScriptCodeEditor } from '@coding-script/script-engine';
-import type { ScriptMetadata } from '@coding-script/script-engine';
+import sampleMetadata from './meta.json';
 import { message } from 'antd';
 
-const sampleMetadata: ScriptMetadata = JSON.parse(`{"binds":[{"dataType":"GroovyBindObject","name":"$request"}],"description":"run 函数是脚本的主入口，由引擎在每次任务触发时自动调用。\\n\\n参数说明：\\n  - request: MyScriptRequest 类型，包含本次请求携带的所有业务字段。\\n\\n返回值：Integer 类型，表示本次执行的结果状态码。\\n  - 0 表示成功\\n  - 1 表示参数校验失败\\n  - 2 表示业务逻辑异常\\n\\n注意事项：\\n  1. 函数内部可以通过 $request 访问全局注入对象，获取上下文环境信息（如租户 ID、用户身份等）。\\n  2. 请勿在函数内执行耗时超过 5 秒的同步操作，否则引擎会触发超时中断并记录告警日志。\\n  3. 所有对 request 字段的访问应提前做非空判断，避免 NullPointerException 导致整个任务失败。\\n  4. 若需要调用外部 HTTP 接口，请使用内置的 httpUtil 工具类，而非直接 new URL 连接，以确保连接池复用与超时管控生效。","mainMethod":"run","requests":[{"dataType":"MyScriptRequest","description":"我的测试对象","name":"request"}],"returnType":"Integer","types":{"MyScriptRequest":{"dataType":"MyScriptRequest","description":"我的测试对象","fields":[{"dataType":"int","description":"总数量","name":"count"},{"dataType":"MyTest","description":"test","name":"test"}],"functions":[{"description":"是否匹配","name":"isSupport","parameters":[{"dataType":"int","description":"描述信息","name":"count"}]}]},"Integer":{"dataType":"Integer","fields":[],"functions":[]},"boolean":{"dataType":"boolean","fields":[],"functions":[]},"Long":{"dataType":"Long","fields":[],"functions":[]},"String":{"dataType":"String","fields":[],"functions":[]},"MyTest":{"dataType":"MyTest","description":"test","fields":[{"dataType":"Long","description":"id","name":"id"},{"dataType":"String","description":"name","name":"name"}],"functions":[]},"int":{"dataType":"int","fields":[],"functions":[]}}}`);
 
 const sampleCode = `def run(request){
     println($request.count);

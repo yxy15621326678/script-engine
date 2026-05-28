@@ -1,5 +1,31 @@
 import type React from 'react';
 
+// ── 工具栏按钮 ────────────────────────────────────────────────
+
+/** 工具栏按钮属性 */
+export interface ToolbarButtonProps {
+  /** 按钮内容（支持 ReactNode，可包含图标 + 文字） */
+  label: React.ReactNode;
+  /** 鼠标悬停提示文字（原生 title 属性） */
+  title: string;
+  /** 按钮背景色 */
+  backgroundColor: string;
+  /** 鼠标悬停时的背景色 */
+  hoverBackgroundColor: string;
+  /** 文字颜色 */
+  textColor: string;
+  /** 边框颜色 */
+  borderColor: string;
+  /** 点击回调 */
+  onClick: () => void;
+}
+
+/** 工具栏自定义按钮项（用于 toolbar 数组） */
+export interface ToolbarItem extends ToolbarButtonProps {
+  /** 唯一标识（React key） */
+  key: string;
+}
+
 // ── 脚本元数据 Schema ──────────────────────────────────────────
 
 /** 函数参数信息 */
@@ -121,6 +147,8 @@ export interface ScriptCodeEditorProps {
   onCompile?: (code: string) => void;
 
   // ── 自定义工具栏内容 ──────────────────────────────────────
+  /** 工具栏自定义按钮列表（渲染在内置按钮之后） */
+  toolbar?: ToolbarItem[];
   /** 工具栏额外内容（渲染在内置按钮之后，任意 React 节点） */
   toolbarExtra?: React.ReactNode;
 

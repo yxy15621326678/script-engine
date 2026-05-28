@@ -2,6 +2,7 @@ import React from 'react';
 import { ToolbarButton } from './toolbar-button';
 import { FormatIcon } from './format-icon';
 import { MaximizeIcon, MinimizeIcon } from './fullscreen-icon';
+import type { ToolbarItem } from '../types';
 
 // 锤子图标（编译/构建）
 const HammerIcon: React.FC<{ color: string }> = ({ color }) => (
@@ -42,6 +43,7 @@ export interface ToolbarProps {
   enableFullscreen?: boolean;
   isFullscreen?: boolean;
   onToggleFullscreen?: () => void;
+  toolbar?: ToolbarItem[];
   toolbarExtra?: React.ReactNode;
 }
 
@@ -57,6 +59,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   enableFullscreen,
   isFullscreen,
   onToggleFullscreen,
+  toolbar,
   toolbarExtra,
 }) => {
   const isDark = theme === 'dark';
@@ -105,10 +108,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <ToolbarButton
           label={isDark ? '🌞 浅色模式' : '🌙 深色模式'}
           title={isDark ? '切换到浅色主题' : '切换到深色主题'}
-          bg={btnBg}
-          hoverBg={btnHoverBg}
-          color={toolbarText}
-          border={borderColor}
+          backgroundColor={btnBg}
+          hoverBackgroundColor={btnHoverBg}
+          textColor={toolbarText}
+          borderColor={borderColor}
           onClick={handleThemeToggle}
         />
       )}
@@ -122,10 +125,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </>
           }
           title="格式化代码"
-          bg={isDark ? '#1e3a5f' : '#e6f4ff'}
-          hoverBg={isDark ? '#264a73' : '#bae0ff'}
-          color={isDark ? '#61afef' : '#1677ff'}
-          border={isDark ? '#1e3a5f' : '#91caff'}
+          backgroundColor={isDark ? '#1e3a5f' : '#e6f4ff'}
+          hoverBackgroundColor={isDark ? '#264a73' : '#bae0ff'}
+          textColor={isDark ? '#61afef' : '#1677ff'}
+          borderColor={isDark ? '#1e3a5f' : '#91caff'}
           onClick={onFormat}
         />
       )}
@@ -139,10 +142,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </>
           }
           title="编译并验证脚本"
-          bg={isDark ? '#2d5a27' : '#e6f4e5'}
-          hoverBg={isDark ? '#3a7033' : '#d4ecd3'}
-          color={isDark ? '#98c379' : '#389e0d'}
-          border={isDark ? '#2d5a27' : '#b7eb8f'}
+          backgroundColor={isDark ? '#2d5a27' : '#e6f4e5'}
+          hoverBackgroundColor={isDark ? '#3a7033' : '#d4ecd3'}
+          textColor={isDark ? '#98c379' : '#389e0d'}
+          borderColor={isDark ? '#2d5a27' : '#b7eb8f'}
           onClick={onCompile}
         />
       )}
@@ -160,13 +163,27 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             </>
           }
           title={isFullscreen ? '退出全屏（ESC）' : '全屏显示'}
-          bg={isDark ? '#3a2d5a' : '#f3e8ff'}
-          hoverBg={isDark ? '#4a3d6a' : '#e9d5ff'}
-          color={isDark ? '#c678dd' : '#722ed1'}
-          border={isDark ? '#3a2d5a' : '#d3adf7'}
+          backgroundColor={isDark ? '#3a2d5a' : '#f3e8ff'}
+          hoverBackgroundColor={isDark ? '#4a3d6a' : '#e9d5ff'}
+          textColor={isDark ? '#c678dd' : '#722ed1'}
+          borderColor={isDark ? '#3a2d5a' : '#d3adf7'}
           onClick={() => onToggleFullscreen?.()}
         />
       )}
+
+      {/* 自定义工具栏按钮列表 */}
+      {toolbar?.map((item) => (
+        <ToolbarButton
+          key={item.key}
+          label={item.label}
+          title={item.title}
+          backgroundColor={item.backgroundColor}
+          hoverBackgroundColor={item.hoverBackgroundColor}
+          textColor={item.textColor}
+          borderColor={item.borderColor}
+          onClick={item.onClick}
+        />
+      ))}
 
       {/* 自定义工具栏内容 */}
       {toolbarExtra}

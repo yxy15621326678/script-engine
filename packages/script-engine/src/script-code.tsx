@@ -171,6 +171,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     enableFormat,
     enableCompile,
     enableFullscreen,
+    toolbar,
     toolbarExtra,
     options = {},
   } = props;
@@ -387,6 +388,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
         enableFullscreen={enableFullscreen}
         isFullscreen={isFullscreen}
         onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+        toolbar={toolbar}
         toolbarExtra={toolbarExtra}
       />
 

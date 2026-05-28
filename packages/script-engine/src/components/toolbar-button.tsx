@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
+import type { ToolbarButtonProps } from '../types';
 
-export interface ToolbarButtonProps {
-  label: React.ReactNode;
-  title: string;
-  bg: string;
-  hoverBg: string;
-  color: string;
-  border: string;
-  onClick: () => void;
-}
-
-export const ToolbarButton: React.FC<ToolbarButtonProps> = ({ label, title, bg, hoverBg, color, border, onClick }) => {
+export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
+  label,
+  title,
+  backgroundColor,
+  hoverBackgroundColor,
+  textColor,
+  borderColor,
+  onClick,
+}) => {
   const [hovered, setHovered] = useState(false);
   return (
     <button
@@ -21,9 +20,9 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({ label, title, bg, 
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        background: hovered ? hoverBg : bg,
-        border: `1px solid ${border}`,
-        color,
+        background: hovered ? hoverBackgroundColor : backgroundColor,
+        border: `1px solid ${borderColor}`,
+        color: textColor,
         cursor: 'pointer',
         fontSize: 12,
         padding: '4px 10px',

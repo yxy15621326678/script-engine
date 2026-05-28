@@ -1,7 +1,7 @@
 export { themes, SCROLL_CLASS, ensureScrollbarStyle } from './theme-colors';
 export type { ThemeColors } from './theme-colors';
 export { ToolbarButton } from './toolbar-button';
-export type { ToolbarButtonProps } from './toolbar-button';
+export type { ToolbarButtonProps } from '../types';
 export { Toolbar } from './toolbar';
 export type { ToolbarProps } from './toolbar';
 export { ExpandSidebarButton } from './expand-sidebar-button';
