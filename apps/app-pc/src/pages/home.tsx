@@ -36,7 +36,18 @@ const HomePage = () => {
           console.log('Code changed:', value);
         }}
         options={{ minHeight: 400, maxHeight: 500 }}
-        toolbarExtra={<div style={{ marginLeft: 16, color: '#888' }}>这是额外的工具栏内容</div>}
+        toolbar={[
+          {
+            label: '自定义按钮',
+            title: '这是一个自定义工具栏按钮',
+            backgroundColor: '#007bff',
+            hoverBackgroundColor: '#0056b3',
+            textColor: '#fff',
+            borderColor: '#007bff',
+            onClick: () => message.info('点击了自定义按钮'),
+          },
+        ]}
+        toolbarExtra={<div style={{ marginLeft: 16, color: '#888' }}>这是自定义的额外的工具栏内容</div>}
       />
     </div>
   );

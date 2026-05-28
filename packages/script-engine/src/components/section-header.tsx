@@ -4,11 +4,16 @@ import type { ThemeColors } from './theme-colors';
 export interface SectionHeaderProps {
   colors: ThemeColors;
   label: string;
+  /** 标题右侧的额外操作区域（如按钮、图标） */
+  extra?: React.ReactNode;
 }
 
-export const SectionHeader: React.FC<SectionHeaderProps> = ({ colors, label }) => (
+export const SectionHeader: React.FC<SectionHeaderProps> = ({ colors, label, extra }) => (
   <div
     style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       padding: '6px 12px 4px',
       fontSize: 11,
       textTransform: 'uppercase',
@@ -17,6 +22,7 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({ colors, label }) =
       fontWeight: 600,
     }}
   >
-    {label}
+    <span>{label}</span>
+    {extra && <div style={{ display: 'flex', alignItems: 'center' }}>{extra}</div>}
   </div>
 );

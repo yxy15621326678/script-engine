@@ -165,7 +165,7 @@ export const TypePanel: React.FC<TypePanelProps> = ({
           {/* 主函数信息 */}
           <MainFunctionSection metadata={metadata} colors={colors} />
 
-          {/* 变量区 */}
+          {/* 函数入参 + 绑定参数 */}
           <VariablesSection
             sortedBinds={sortedBinds}
             sortedRequests={sortedRequests}

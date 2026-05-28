@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ToolbarButton } from './toolbar-button';
 import { FormatIcon } from './format-icon';
 import { MaximizeIcon, MinimizeIcon } from './fullscreen-icon';
 import type { ToolbarItem } from '../types';
+import { themes } from './theme-colors';
 
 // 锤子图标（编译/构建）
 const HammerIcon: React.FC<{ color: string }> = ({ color }) => (
@@ -31,6 +32,70 @@ const HammerIcon: React.FC<{ color: string }> = ({ color }) => (
   </svg>
 );
 
+// ── Tooltip 定位 ─────────────────────────────────────────────────
+
+interface TooltipPos {
+  top: number;
+  left: number;
+  maxWidth: number;
+  maxHeight: number;
+}
+
+const TIP_MARGIN = 6;
+const TIP_MAX_WIDTH = 380;
+
+function calcTooltipPos(anchorRect: DOMRect, el: HTMLDivElement | null): TooltipPos {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const tipH = el?.scrollHeight ?? 200;
+  const spaceBelow = vh - anchorRect.bottom - TIP_MARGIN;
+  const spaceAbove = anchorRect.top - TIP_MARGIN;
+  const placeBelow = spaceBelow >= Math.min(tipH, 260) || spaceBelow >= spaceAbove;
+
+  const top = placeBelow
+    ? anchorRect.bottom + TIP_MARGIN
+    : Math.max(TIP_MARGIN, anchorRect.top - tipH - TIP_MARGIN);
+
+  let left = anchorRect.left;
+  const maxRight = vw - TIP_MARGIN;
+  if (left + TIP_MAX_WIDTH > maxRight) {
+    left = Math.max(TIP_MARGIN, maxRight - TIP_MAX_WIDTH);
+  }
+
+  const maxWidth = Math.min(TIP_MAX_WIDTH, maxRight - left);
+  const maxHeight = placeBelow ? spaceBelow - TIP_MARGIN : spaceAbove - TIP_MARGIN;
+  return { top, left, maxWidth, maxHeight: Math.max(maxHeight, 80) };
+}
+
+// ── 描述行解析：key: value 高亮 ──────────────────────────────────
+
+const KV_RE = /^([^:]+):\s*([\s\S]+)$/;
+
+function renderDescLine(line: string, accent: string): React.ReactNode {
+  const m = line.match(KV_RE);
+  if (m) {
+    return (
+      <span>
+        <span style={{ color: accent, fontWeight: 600 }}>{m[1]}</span>
+        <span>: {m[2]}</span>
+      </span>
+    );
+  }
+  return line;
+}
+
+// ── 问号图标 ─────────────────────────────────────────────────────
+
+const QuestionIcon: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+// ── Props ────────────────────────────────────────────────────────
+
 export interface ToolbarProps {
   title?: string;
   theme: 'dark' | 'light';
@@ -45,6 +110,8 @@ export interface ToolbarProps {
   onToggleFullscreen?: () => void;
   toolbar?: ToolbarItem[];
   toolbarExtra?: React.ReactNode;
+  /** 脚本说明内容（有值时显示"脚本说明"按钮） */
+  description?: string;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -61,13 +128,51 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onToggleFullscreen,
   toolbar,
   toolbarExtra,
+  description,
 }) => {
   const isDark = theme === 'dark';
+  const colors = themes[theme];
   const borderColor = isDark ? '#434343' : '#d9d9d9';
   const toolbarBg = isDark ? '#282c34' : '#fafafa';
   const toolbarText = isDark ? '#abb2bf' : '#333';
   const btnBg = isDark ? '#2c313a' : '#f0f0f0';
   const btnHoverBg = isDark ? '#3e4451' : '#e0e0e0';
+
+  // ── 脚本说明弹框状态 ──
+  const [showDesc, setShowDesc] = useState(false);
+  const [tipPos, setTipPos] = useState<TooltipPos | null>(null);
+  const descBtnRef = useRef<HTMLButtonElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+
+  const updateTipPos = useCallback(() => {
+    if (!descBtnRef.current) return;
+    setTipPos(calcTooltipPos(descBtnRef.current.getBoundingClientRect(), tipRef.current));
+  }, []);
+
+  useEffect(() => {
+    if (!showDesc) return;
+    updateTipPos();
+    window.addEventListener('scroll', updateTipPos, true);
+    window.addEventListener('resize', updateTipPos);
+    return () => {
+      window.removeEventListener('scroll', updateTipPos, true);
+      window.removeEventListener('resize', updateTipPos);
+    };
+  }, [showDesc, updateTipPos]);
+
+  // 关闭弹框时重置位置
+  useEffect(() => {
+    if (!showDesc) setTipPos(null);
+  }, [showDesc]);
+
+  // description 消失时自动关闭弹框
+  useEffect(() => {
+    if (!description) setShowDesc(false);
+  }, [description]);
+
+  const descLines = description
+    ? description.replace(/\\n/g, '\n').split('\n').filter((l) => l.trim())
+    : [];
 
   const handleThemeToggle = () => {
     const next = isDark ? 'light' : 'dark';
@@ -104,6 +209,36 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       )}
       {!title && <span style={{ marginRight: 'auto' }} />}
 
+
+      {/* 脚本说明按钮 */}
+      {descLines.length > 0 && (
+        <button
+          ref={descBtnRef}
+          onClick={() => setShowDesc((v) => !v)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '4px 10px',
+            borderRadius: 4,
+            border: `1px solid ${isDark ? '#2d5a27' : '#b7eb8f'}`,
+            background: showDesc
+              ? (isDark ? '#3a7033' : '#d4ecd3')
+              : (isDark ? '#2d5a27' : '#e6f4e5'),
+            color: isDark ? '#98c379' : '#389e0d',
+            cursor: 'pointer',
+            fontSize: 12,
+            lineHeight: 1.4,
+            whiteSpace: 'nowrap',
+            transition: 'background 0.15s',
+          }}
+          title={showDesc ? '隐藏脚本说明' : '查看脚本说明'}
+        >
+          <QuestionIcon color="currentColor" />
+          脚本说明
+        </button>
+      )}
+      
       {enableThemeToggle && (
         <ToolbarButton
           label={isDark ? '🌞 浅色模式' : '🌙 深色模式'}
@@ -171,6 +306,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         />
       )}
 
+
       {/* 自定义工具栏按钮列表 */}
       {toolbar?.map((item) => (
         <ToolbarButton
@@ -187,6 +323,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* 自定义工具栏内容 */}
       {toolbarExtra}
+
+      {/* 脚本说明 Tooltip（fixed 定位，脱离滚动容器） */}
+      {showDesc && tipPos && descLines.length > 0 && (
+        <div
+          ref={tipRef}
+          style={{
+            position: 'fixed',
+            top: tipPos.top,
+            left: tipPos.left,
+            maxWidth: tipPos.maxWidth,
+            maxHeight: tipPos.maxHeight,
+            overflowY: 'auto',
+            padding: '10px 14px',
+            background: colors.headerBg,
+            border: `1px solid ${colors.border}`,
+            borderRadius: 6,
+            color: colors.text,
+            fontSize: 12,
+            lineHeight: 1.65,
+            wordBreak: 'break-word',
+            zIndex: 9999,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            pointerEvents: 'auto',
+          }}
+        >
+          {descLines.map((line, i) => (
+            <div key={i} style={{ marginBottom: i < descLines.length - 1 ? 4 : 0 }}>
+              {renderDescLine(line, colors.accent)}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

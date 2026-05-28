@@ -17,25 +17,37 @@ export const VariablesSection: React.FC<VariablesSectionProps> = ({ sortedBinds,
 
   return (
     <div>
-      <SectionHeader colors={colors} label="变量" />
-      {sortedBinds.map((bind) => (
-        <VariableRow
-          key={bind.name}
-          name={bind.name}
-          dataType={bind.dataType}
-          description={bind.description}
-          colors={colors}
-        />
-      ))}
-      {sortedRequests.map((req) => (
-        <VariableRow
-          key={req.name}
-          name={req.name}
-          dataType={req.dataType}
-          description={req.description}
-          colors={colors}
-        />
-      ))}
+      {/* 函数入参 */}
+      {sortedRequests.length > 0 && (
+        <>
+          <SectionHeader colors={colors} label="函数入参" />
+          {sortedRequests.map((req) => (
+            <VariableRow
+              key={req.name}
+              name={req.name}
+              dataType={req.dataType}
+              description={req.description}
+              colors={colors}
+            />
+          ))}
+        </>
+      )}
+
+      {/* 绑定参数 */}
+      {sortedBinds.length > 0 && (
+        <>
+          <SectionHeader colors={colors} label="绑定参数" />
+          {sortedBinds.map((bind) => (
+            <VariableRow
+              key={bind.name}
+              name={bind.name}
+              dataType={bind.dataType}
+              description={bind.description}
+              colors={colors}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 };

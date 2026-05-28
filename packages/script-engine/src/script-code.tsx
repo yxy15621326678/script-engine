@@ -390,6 +390,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
         onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
         toolbar={toolbar}
         toolbarExtra={toolbarExtra}
+        description={metadata?.description}
       />
 
       {/* ── 编辑器 + 侧边栏 ───────────────────────────── */}
