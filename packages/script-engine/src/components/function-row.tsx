@@ -10,7 +10,7 @@ export interface FunctionRowProps {
 export const FunctionRow: React.FC<FunctionRowProps> = ({ func, colors }) => {
   const [hovered, setHovered] = useState(false);
   const params = func.parameters.map((p) => `${p.name}: ${p.dataType}`).join(', ');
-  const sig = `${func.name}(${params})`;
+  const sig = `${func.name}(${params})${func.returnType ? ` → ${func.returnType}` : ''}`;
   return (
     <div
       style={{
@@ -30,6 +30,11 @@ export const FunctionRow: React.FC<FunctionRowProps> = ({ func, colors }) => {
         <span style={{ color: colors.textSecondary, fontSize: 11 }}>
           ({params})
         </span>
+        {func.returnType && (
+          <span style={{ color: colors.typeColor, fontSize: 11, marginLeft: 'auto' }}>
+            → {func.returnType}
+          </span>
+        )}
       </div>
       {func.description && (
         <div style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2, paddingLeft: 16 }}>

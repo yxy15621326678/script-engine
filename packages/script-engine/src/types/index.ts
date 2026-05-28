@@ -9,15 +9,17 @@ export interface ToolbarButtonProps {
   /** 鼠标悬停提示文字（原生 title 属性） */
   title: string;
   /** 按钮背景色 */
-  backgroundColor: string;
+  backgroundColor?: string;
   /** 鼠标悬停时的背景色 */
-  hoverBackgroundColor: string;
+  hoverBackgroundColor?: string;
   /** 文字颜色 */
-  textColor: string;
+  textColor?: string;
   /** 边框颜色 */
-  borderColor: string;
+  borderColor?: string;
   /** 点击回调 */
   onClick: () => void;
+  /** 是否处于激活状态（可选，激活时使用 hoverBackgroundColor 作为背景色） */
+  active?: boolean;
 }
 
 /** 工具栏自定义按钮项（用于 toolbar 数组） */

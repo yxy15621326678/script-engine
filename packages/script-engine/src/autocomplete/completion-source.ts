@@ -31,10 +31,14 @@ function buildMemberCompletions(typeInfo: ScriptTypeInfo): Completion[] {
 
   for (const func of typeInfo.functions) {
     const sig = formatFunctionSignature(func);
+    const ret = func.returnType ? ` → ${func.returnType}` : '';
+    const detail = func.description
+      ? `${sig}${ret} — ${func.description}`
+      : `${sig}${ret}`;
     options.push({
       label: func.name,
       type: 'function',
-      detail: func.description ? `${sig} — ${func.description}` : sig,
+      detail,
       info: func.description || undefined,
       apply: `${func.name}()`,
       boost: -1,

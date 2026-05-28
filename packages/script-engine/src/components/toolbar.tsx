@@ -212,31 +212,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* 脚本说明按钮 */}
       {descLines.length > 0 && (
-        <button
+        <ToolbarButton
           ref={descBtnRef}
-          onClick={() => setShowDesc((v) => !v)}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '4px 10px',
-            borderRadius: 4,
-            border: `1px solid ${isDark ? '#2d5a27' : '#b7eb8f'}`,
-            background: showDesc
-              ? (isDark ? '#3a7033' : '#d4ecd3')
-              : (isDark ? '#2d5a27' : '#e6f4e5'),
-            color: isDark ? '#98c379' : '#389e0d',
-            cursor: 'pointer',
-            fontSize: 12,
-            lineHeight: 1.4,
-            whiteSpace: 'nowrap',
-            transition: 'background 0.15s',
-          }}
+          label={
+            <>
+              <QuestionIcon color="currentColor" />
+              脚本说明
+            </>
+          }
           title={showDesc ? '隐藏脚本说明' : '查看脚本说明'}
-        >
-          <QuestionIcon color="currentColor" />
-          脚本说明
-        </button>
+          backgroundColor={isDark ? '#2d5a27' : '#e6f4e5'}
+          hoverBackgroundColor={isDark ? '#3a7033' : '#d4ecd3'}
+          textColor={isDark ? '#98c379' : '#389e0d'}
+          borderColor={isDark ? '#2d5a27' : '#b7eb8f'}
+          active={showDesc}
+          onClick={() => setShowDesc((v) => !v)}
+        />
       )}
       
       {enableThemeToggle && (

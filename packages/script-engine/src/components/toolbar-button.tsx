@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { forwardRef, useState } from 'react';
 import type { ToolbarButtonProps } from '../types';
 
-export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
+export const ToolbarButton = forwardRef<HTMLButtonElement, ToolbarButtonProps>(({
   label,
   title,
   backgroundColor,
@@ -9,10 +10,13 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   textColor,
   borderColor,
   onClick,
-}) => {
+  active,
+}, ref) => {
   const [hovered, setHovered] = useState(false);
+  const bg = active ? hoverBackgroundColor : (hovered ? hoverBackgroundColor : backgroundColor);
   return (
     <button
+      ref={ref}
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -20,7 +24,7 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        background: hovered ? hoverBackgroundColor : backgroundColor,
+        background: bg,
         border: `1px solid ${borderColor}`,
         color: textColor,
         cursor: 'pointer',
@@ -36,4 +40,6 @@ export const ToolbarButton: React.FC<ToolbarButtonProps> = ({
       {label}
     </button>
   );
-};
+});
+
+ToolbarButton.displayName = 'ToolbarButton';
