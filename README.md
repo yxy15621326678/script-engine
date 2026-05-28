@@ -9,7 +9,8 @@
 - **动态类型自动补全**：基于 `ScriptMetadata` 提供变量名补全和点号链式访问补全（如 `request.test.name`）
 - **Groovy 语法提示**：内置 `if`/`for`/`while`/`println`/`return` 等常用 Groovy 语法片段
 - **代码格式化**：内置 Groovy 格式化器，也可通过 `onFormat` 自定义格式化逻辑
-- **属性面板**：右侧侧边栏展示主函数签名、变量、数据类型（字段和方法），支持折叠/展开和拖拽调节宽度
+- **属性面板**：右侧侧边栏展示主函数签名、函数入参、绑定参数、数据类型（字段和方法），支持折叠/展开和拖拽调节宽度
+- **脚本说明**：工具栏"脚本说明"按钮，点击展开/收起脚本描述弹框，支持多行文本和 `key: value` 格式高亮
 - **主题切换**：暗色/亮色两套主题，编辑器、补全弹窗、属性面板同步切换，编辑器内部管理主题状态
 - **全屏模式**：支持 CSS 全屏（`position: fixed` 覆盖视口），不影响编辑器内容
 - **自定义工具栏**：通过 `toolbarExtra` 传入任意 React 节点
@@ -127,7 +128,44 @@ function App() {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `toolbarExtra` | `React.ReactNode` | `undefined` | 工具栏额外内容，渲染在内置按钮之后，可传入任意 JSX |
+| `toolbar` | `ToolbarItem[]` | `undefined` | 工具栏自定义按钮列表，渲染在内置按钮之后、`toolbarExtra` 之前 |
+| `toolbarExtra` | `React.ReactNode` | `undefined` | 工具栏额外内容，渲染在最后，可传入任意 JSX |
+
+`ToolbarItem` 类型：
+
+```typescript
+interface ToolbarItem {
+  key: string;           // 唯一标识
+  label: ReactNode;      // 按钮内容
+  title: string;         // 鼠标悬停提示
+  backgroundColor: string;
+  hoverBackgroundColor: string;
+  textColor: string;
+  borderColor: string;
+  onClick: () => void;
+}
+```
+
+**使用按钮列表：**
+
+```tsx
+<ScriptCodeEditor
+  toolbar={[
+    {
+      key: 'save',
+      label: '💾 保存',
+      title: '保存脚本',
+      backgroundColor: '#007bff',
+      hoverBackgroundColor: '#0056b3',
+      textColor: '#fff',
+      borderColor: '#007bff',
+      onClick: () => saveCode(),
+    },
+  ]}
+/>
+```
+
+**使用自定义内容：**
 
 ```tsx
 <ScriptCodeEditor
@@ -154,7 +192,7 @@ function App() {
 interface ScriptMetadata {
   /** 主函数名称（可选） */
   mainMethod?: string;
-  /** 主函数描述信息（可选，提供后在属性面板主函数名旁显示悬浮提示） */
+  /** 脚本说明（可选，提供后在工具栏显示"脚本说明"按钮，点击展开/收起描述弹框） */
   description?: string;
   /** 注入变量（如 $request，name 含 $ 前缀） */
   binds: ScriptBindInfo[];
