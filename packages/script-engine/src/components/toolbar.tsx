@@ -67,22 +67,6 @@ function calcTooltipPos(anchorRect: DOMRect, el: HTMLDivElement | null): Tooltip
   return { top, left, maxWidth, maxHeight: Math.max(maxHeight, 80) };
 }
 
-// ── 描述行解析：key: value 高亮 ──────────────────────────────────
-
-const KV_RE = /^([^:]+):\s*([\s\S]+)$/;
-
-function renderDescLine(line: string, accent: string): React.ReactNode {
-  const m = line.match(KV_RE);
-  if (m) {
-    return (
-      <span>
-        <span style={{ color: accent, fontWeight: 600 }}>{m[1]}</span>
-        <span>: {m[2]}</span>
-      </span>
-    );
-  }
-  return line;
-}
 
 // ── 问号图标 ─────────────────────────────────────────────────────
 
@@ -170,9 +154,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     if (!description) setShowDesc(false);
   }, [description]);
 
-  const descLines = description
-    ? description.replace(/\\n/g, '\n').split('\n').filter((l) => l.trim())
-    : [];
+  const descHtml = description
+    ? description.replace(/\\n/g, '\n').replace(/\n/g, '<br>')
+    : '';
 
   const handleThemeToggle = () => {
     const next = isDark ? 'light' : 'dark';
@@ -211,7 +195,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
 
       {/* 脚本说明按钮 */}
-      {descLines.length > 0 && (
+      {descHtml && (
         <ToolbarButton
           ref={descBtnRef}
           label={
@@ -316,7 +300,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {toolbarExtra}
 
       {/* 脚本说明 Tooltip（fixed 定位，脱离滚动容器） */}
-      {showDesc && tipPos && descLines.length > 0 && (
+      {showDesc && tipPos && descHtml && (
         <div
           ref={tipRef}
           style={{
@@ -338,13 +322,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
             pointerEvents: 'auto',
           }}
-        >
-          {descLines.map((line, i) => (
-            <div key={i} style={{ marginBottom: i < descLines.length - 1 ? 4 : 0 }}>
-              {renderDescLine(line, colors.accent)}
-            </div>
-          ))}
-        </div>
+          dangerouslySetInnerHTML={{ __html: descHtml }}
+        />
       )}
     </div>
   );

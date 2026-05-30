@@ -1,6 +1,6 @@
 {
     "binds": [],
-    "description": "这是一个run函数，返回的格式为int类型。",
+    "description": "<b>run</b> 函数用于执行核心业务逻辑，返回 <code>int</code> 类型的结果。<br><br><span style='color:#e5c07b'>▸ 入参</span><br>  request: <code>MyScriptRequest</code> 请求对象，包含 count、test 等字段<br><span style='color:#e5c07b'>▸ 返回值</span><br>  <code>Integer</code> 处理后的整型结果<br><span style='color:#e5c07b'>▸ 示例</span><br>  <code style='background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:3px'>def result = run(request)</code><br><br><em>注意：request 中的 count 字段必须大于 0，否则将抛出异常。</em>",
     "mainMethod": "run",
     "requests": [
         {
