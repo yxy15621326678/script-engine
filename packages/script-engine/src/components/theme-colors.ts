@@ -62,6 +62,9 @@ export function ensureScrollbarStyle() {
     .${SCROLL_CLASS}::-webkit-scrollbar-track { background: transparent; }
     body.se-panel-resizing { cursor: col-resize !important; user-select: none !important; }
     body.se-panel-resizing * { cursor: col-resize !important; user-select: none !important; }
+    .se-desc-tip p { margin: 0 0 4px 0; }
+    .se-desc-tip p:last-child { margin-bottom: 0; }
+    .se-desc-tip code { font-family: Menlo, Consolas, monospace; font-size: 11px; }
   `;
   document.head.appendChild(style);
 }

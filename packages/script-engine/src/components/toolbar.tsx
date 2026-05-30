@@ -3,7 +3,7 @@ import { ToolbarButton } from './toolbar-button';
 import { FormatIcon } from './format-icon';
 import { MaximizeIcon, MinimizeIcon } from './fullscreen-icon';
 import type { ToolbarItem } from '../types';
-import { themes } from './theme-colors';
+import { themes, ensureScrollbarStyle } from './theme-colors';
 
 // 锤子图标（编译/构建）
 const HammerIcon: React.FC<{ color: string }> = ({ color }) => (
@@ -135,6 +135,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   useEffect(() => {
     if (!showDesc) return;
+    ensureScrollbarStyle();
     updateTipPos();
     window.addEventListener('scroll', updateTipPos, true);
     window.addEventListener('resize', updateTipPos);
@@ -303,6 +304,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {showDesc && tipPos && descHtml && (
         <div
           ref={tipRef}
+          className="se-desc-tip"
           style={{
             position: 'fixed',
             top: tipPos.top,
@@ -316,7 +318,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             borderRadius: 6,
             color: colors.text,
             fontSize: 12,
-            lineHeight: 1.65,
+            lineHeight: 1.5,
             wordBreak: 'break-word',
             zIndex: 9999,
             boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
