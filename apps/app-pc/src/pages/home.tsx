@@ -28,7 +28,7 @@ const HomePage = () => {
         enableFormat
         enableCompile
         enableFullscreen
-        onCompile={(code:string) => {
+        onCompile={(code: string) => {
           console.log('编译脚本:', code);
           message.success('脚本编译测试已提交');
         }}
@@ -38,6 +38,7 @@ const HomePage = () => {
         options={{ minHeight: 400, maxHeight: 500 }}
         toolbar={[
           {
+            key: 'customButton',
             label: '自定义按钮',
             title: '这是一个自定义工具栏按钮',
             backgroundColor: '#007bff',
