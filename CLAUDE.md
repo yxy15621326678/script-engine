@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-Script Engine 是一个基于 React + CodeMirror 6 的 Groovy 脚本编辑器组件库，提供语法高亮、动态类型自动补全、属性面板等功能。发布为 npm 包 `@coding-script/script-engine`。
+Script Engine 是一个基于 React + CodeMirror 6 的多语言脚本编辑器组件库，内置支持 Groovy 和 JavaScript，提供语法高亮、动态类型自动补全、属性面板等功能。发布为 npm 包 `@coding-script/script-engine`。
 
 **用户全局规则**：使用中文回复。
 
@@ -67,16 +67,20 @@ packages/script-engine/src/
 │   └── data-types-section.tsx ← 数据类型列表区
 ├── autocomplete/             ← 自动补全逻辑
 │   ├── index.ts
-│   ├── completion-source.ts  ← CompletionSource 工厂函数
+│   ├── completion-source.ts  ← CompletionSource 工厂函数（语言无关）
 │   └── resolve.ts            ← 类型链解析工具函数
+├── languages/                ← 多语言支持
+│   ├── index.ts              ← 语言注册表 + resolveLanguageConfig()
+│   ├── groovy.ts             ← Groovy LanguageConfig（21 snippets + java() 语法高亮）
+│   └── javascript.ts         ← JavaScript LanguageConfig（22 snippets + javascript() 语法高亮）
 ├── type-panel/               ← 属性面板主组件
 │   ├── index.ts
 │   └── type-panel.tsx        ← TypePanel 主组件（拖拽/排序/布局）
 ├── utils/
 │   └── groovy-formatter.ts   ← Groovy 代码格式化工具函数
 ├── types/
-│   └── index.ts              ← 所有 TypeScript 接口
-├── script-code.tsx           ← ScriptCodeEditor 主组件（CM 配置 + 布局）
+│   └── index.ts              ← 所有 TypeScript 接口（含 LanguageConfig）
+├── script-code.tsx           ← ScriptCodeEditor 主组件（CM 配置 + 布局 + 多语言）
 └── index.ts                  ← 库入口
 ```
 
@@ -97,14 +101,15 @@ packages/script-engine/src/
 
 编辑器只在首次挂载和布局属性（`fontSize`/`minHeight`/`maxHeight`/`placeholder`/`readonly`）变化时重建。以下内容通过 Compartment 热更新：
 
+- `languageCompartmentRef`：语言切换 → `languageConfig.extension()`
 - `themeCompartmentRef`：主题（dark/light）切换 → `buildThemeExtensions(theme)`
-- `autocompleteCompartmentRef`：metadata 变化 → `buildAutocompleteExt(metadata)`
+- `autocompleteCompartmentRef`：metadata 或语言变化 → `buildAutocompleteExt(languageConfig, metadata)`
 
-**绝对不要**把 `theme`、`metadata`、`value` 放到编辑器创建的 useEffect 依赖数组中，否则会丢失用户已编辑的代码内容。
+**绝对不要**把 `theme`、`metadata`、`value`、`language` 放到编辑器创建的 useEffect 依赖数组中，否则会丢失用户已编辑的代码内容。
 
 `onChangeRef` / `metadataRef` 使用 ref 持有回调，避免闭包过期。
 
-`@codemirror/lang-java` 保留用于 Groovy 语法高亮（CodeMirror 6 没有官方 Groovy 语言包）。
+`language` prop 支持字符串（内置语言名）或自定义 `LanguageConfig` 对象，通过 `resolveLanguageConfig()` 解析。Groovy 使用 `@codemirror/lang-java` 进行语法高亮（CodeMirror 6 没有官方 Groovy 语言包），JavaScript 使用 `@codemirror/lang-javascript`。
 
 ### 自动补全 (`src/autocomplete/`)
 
@@ -114,11 +119,11 @@ packages/script-engine/src/
   - `resolveChainType(parts, metadata)` → 解析完整链 `["request", "test"]` → `MyTest` 类型
   - `MAX_DEPTH = 20` 防止循环引用
 - `completion-source.ts`：
-  - `createGroovyCompletionSource(metadata)`：metadata 驱动 + Groovy 语法（有 metadata 时使用）
-  - `createGroovyKeywordSource()`：仅 Groovy 语法（无 metadata 时使用）
-  - 通过 `syntaxTree(context.state).resolveInner()` 检测字符串/注释位置，抑制补全
+  - `createCompletionSource(languageConfig, metadata?)`：语言无关的补全源工厂，接受语言配置和可选的 metadata
+  - `createGroovyCompletionSource(metadata)` / `createGroovyKeywordSource()`：向后兼容的 Groovy 专用包装（已标记 deprecated）
+  - 通过 `syntaxTree(context.state).resolveInner()` 检测字符串/注释位置，抑制补全（节点名从 `languageConfig.syntaxNodeNames` 读取）
   - 外层 `try/catch` 保证补全失败不崩溃编辑器
-  - Groovy 语法片段用 `snippet()` API（来自 `@codemirror/autocomplete`）实现 tab-stop 占位符
+  - 语法片段用 `snippet()` API（来自 `@codemirror/autocomplete`）实现 tab-stop 占位符，片段定义在各语言的 `LanguageConfig.keywordSnippets` 中
 
 ### 属性面板 (`src/type-panel/`)
 
@@ -132,6 +137,36 @@ packages/script-engine/src/
 - 滚动容器必须设置 `minHeight: 0`（flex 布局关键修复）
 - 所有列表按 name 字母序排序（`localeCompare`）
 - **变量区域拆分为两个独立 SectionHeader**："函数入参"（`sortedRequests`）和"绑定参数"（`sortedBinds`），各自为空时不显示
+
+### 多语言支持 (`src/languages/`)
+
+核心抽象是 `LanguageConfig` 接口（定义在 `types/index.ts`），封装一个编程语言在编辑器中所需的全部差异点：
+
+```ts
+interface LanguageConfig {
+  name: string                    // 语言标识（小写），如 'groovy'
+  displayName: string             // 显示名称，如 'Groovy'
+  extension: () => Extension      // CodeMirror 语言扩展工厂
+  keywordSnippets: readonly Completion[]  // 关键字/语法片段
+  syntaxNodeNames: {              // AST 节点名（用于 isInStringOrComment 判断）
+    stringNodes: string[]         // 如 Java: ['StringLiteral'], JS: ['String', 'TemplateString']
+    commentNodes: string[]        // 如 ['LineComment', 'BlockComment']
+  }
+  placeholder?: string            // 默认占位符
+  formatter?: FormatFn            // 可选内置格式化器
+}
+```
+
+- `languages/index.ts`：`BUILTIN_LANGUAGES` 注册表 + `resolveLanguageConfig(language?)` 辅助函数
+  - 接受字符串（内置语言名）或自定义 `LanguageConfig` 对象
+  - 不传参时默认返回 Groovy 配置
+  - 未知语言名时抛出错误
+- `languages/groovy.ts`：21 个 Groovy snippets（`def`/`each`/`collect` 等），使用 `java()` 语法高亮，内置 `GroovyFormatter`
+- `languages/javascript.ts`：22 个 JS snippets（`function`/`const`/`=>`/`class` 等），使用 `javascript()` 语法高亮，无内置 formatter
+
+**消费者扩展新语言**：导入对应的 `@codemirror/lang-*` 包 + 提供自定义 `LanguageConfig` 对象即可，无需修改库代码。
+
+**格式化优先级**：`onFormat` prop > `languageConfig.formatter`。两者都不存在时不显示格式化按钮。
 
 ### ScriptMetadata Schema (`src/types/index.ts`)
 
@@ -169,13 +204,16 @@ ScriptParameterInfo { dataType, name, description? }
 
 ## 类型导出
 
-`src/index.ts` 必须同时导出组件和类型：
+`src/index.ts` 导出组件、类型和语言配置：
 ```ts
 export * from "./script-code";
 export * from "./types";
+export { GroovyFormatter, GroovyScriptConvertorUtil } from "./utils/groovy-formatter";
+export type { FormatOptions } from "./utils/groovy-formatter";
+export { BUILTIN_LANGUAGES, resolveLanguageConfig, groovyConfig, javascriptConfig } from "./languages";
 ```
 
-消费者通过 `import type { ScriptMetadata } from '@coding-script/script-engine'` 导入类型。`components/` 和 `type-panel/` 内部模块不在顶层导出（属于实现细节）。
+消费者通过 `import type { ScriptMetadata, LanguageConfig, FormatFn } from '@coding-script/script-engine'` 导入类型。`components/` 和 `type-panel/` 内部模块不在顶层导出（属于实现细节）。
 
 ## 主题
 

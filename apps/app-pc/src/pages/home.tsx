@@ -1,15 +1,26 @@
+import { useState } from 'react';
 import { ScriptCodeEditor } from '@coding-script/script-engine';
 import sampleMetadata from './meta.json';
-import { message } from 'antd';
+import { message, Radio } from 'antd';
 
 
-const sampleCode = `def run(request){
+const groovySampleCode = `def run(request){
     println($request.count);
     return request.test.name;
 }
 `;
 
+const javascriptSampleCode = `function run(request) {
+    console.log(request.count);
+    return request.test.name;
+}
+`;
+
 const HomePage = () => {
+  const [language, setLanguage] = useState<'groovy' | 'javascript'>('groovy');
+
+  const sampleCode = language === 'groovy' ? groovySampleCode : javascriptSampleCode;
+  const title = language === 'groovy' ? 'Groovy 脚本编辑器' : 'JavaScript 脚本编辑器';
 
   return (
     <div
@@ -19,9 +30,22 @@ const HomePage = () => {
         transition: 'background 0.3s',
       }}
     >
+      <div style={{ marginBottom: 16 }}>
+        <Radio.Group
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          optionType="button"
+          buttonStyle="solid"
+        >
+          <Radio.Button value="groovy">Groovy</Radio.Button>
+          <Radio.Button value="javascript">JavaScript</Radio.Button>
+        </Radio.Group>
+      </div>
+
       <ScriptCodeEditor
         value={sampleCode}
-        title="Groovy 脚本编辑器"
+        title={title}
+        language={language}
         defaultTheme="light"
         metadata={sampleMetadata}
         enableThemeToggle

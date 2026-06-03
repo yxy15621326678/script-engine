@@ -28,19 +28,18 @@ import {
   indentOnInput,
   syntaxHighlighting,
 } from '@codemirror/language';
-import { java } from '@codemirror/lang-java';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { tags } from '@lezer/highlight';
 import {
   autocompletion,
   completionKeymap,
 } from '@codemirror/autocomplete';
-import { ScriptCodeEditorProps } from './types';
-import { createGroovyCompletionSource, createGroovyKeywordSource } from './autocomplete';
+import type { ScriptCodeEditorProps, LanguageConfig } from './types';
+import { createCompletionSource } from './autocomplete';
+import { resolveLanguageConfig } from './languages';
 import { TypePanel } from './type-panel';
 import { Toolbar } from './components/toolbar';
 import { ExpandSidebarButton } from './components/expand-sidebar-button';
-import { GroovyFormatter } from './utils/groovy-formatter';
 
 const darkHighlightStyle = HighlightStyle.define([
   { tag: tags.keyword, color: '#c678dd' },
@@ -110,18 +109,15 @@ function buildThemeExtensions(theme: 'dark' | 'light'): Extension[] {
   return exts;
 }
 
-function buildAutocompleteExt(metadata: ScriptCodeEditorProps['metadata']): Extension {
-  return metadata
-    ? autocompletion({
-        override: [createGroovyCompletionSource(metadata)],
-        activateOnTyping: true,
-        icons: true,
-      })
-    : autocompletion({
-        override: [createGroovyKeywordSource()],
-        activateOnTyping: true,
-        icons: true,
-      });
+function buildAutocompleteExt(
+  languageConfig: LanguageConfig,
+  metadata: ScriptCodeEditorProps['metadata']
+): Extension {
+  return autocompletion({
+    override: [createCompletionSource(languageConfig, metadata)],
+    activateOnTyping: true,
+    icons: true,
+  });
 }
 
 /** 构建布局扩展 — 全屏时取消高度限制 */
@@ -162,7 +158,8 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     onCompile,
     onFormat,
     onThemeChange,
-    placeholder = '请输入 Groovy 脚本...',
+    language = 'groovy',
+    placeholder,
     defaultTheme,
     title,
     metadata,
@@ -177,6 +174,17 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   } = props;
 
   const { fontSize = 14, minHeight = 300, maxHeight = 300 } = options;
+
+  // 解析语言配置（字符串名或自定义 LanguageConfig）
+  const languageConfig = resolveLanguageConfig(language);
+  const effectivePlaceholder = placeholder ?? languageConfig.placeholder ?? '';
+
+  // 合并格式化器：onFormat prop 优先，fallback 到 languageConfig.formatter
+  const effectiveFormatter = onFormat ?? (
+    languageConfig.formatter
+      ? (code: string) => languageConfig.formatter!(code)
+      : undefined
+  );
 
   // 内部主题状态（prop 仅作初始值）
   const [internalTheme, setInternalTheme] = useState<'dark' | 'light'>(defaultTheme ?? 'dark');
@@ -193,6 +201,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   const themeCompartmentRef = useRef(new Compartment());
   const autocompleteCompartmentRef = useRef(new Compartment());
   const layoutCompartmentRef = useRef(new Compartment());
+  const languageCompartmentRef = useRef(new Compartment());
 
   // 用 ref 持有回调，避免闭包过期
   const onChangeRef = useRef(onChange);
@@ -235,6 +244,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     const themeCompartment = themeCompartmentRef.current;
     const acCompartment = autocompleteCompartmentRef.current;
     const layoutCompartment = layoutCompartmentRef.current;
+    const langCompartment = languageCompartmentRef.current;
 
     const extensions: Extension[] = [
       lineNumbers(),
@@ -257,8 +267,9 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
         ...completionKeymap,
         indentWithTab,
       ]),
-      java(),
-      cmPlaceholder(placeholder),
+      // 语言扩展放入 compartment，切换语言时热更新不重建编辑器
+      langCompartment.of(languageConfig.extension()),
+      cmPlaceholder(effectivePlaceholder),
       EditorView.updateListener.of((update) => {
         if (update.docChanged && onChangeRef.current) {
           onChangeRef.current(update.state.doc.toString());
@@ -269,7 +280,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
       // 主题相关扩展放入 compartment，热更新不重建编辑器
       themeCompartment.of(buildThemeExtensions(internalTheme)),
       // 自动补全放入 compartment
-      acCompartment.of(buildAutocompleteExt(metadataRef.current)),
+      acCompartment.of(buildAutocompleteExt(languageConfig, metadataRef.current)),
     ];
 
     if (readonly) {
@@ -282,7 +293,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
 
     return () => { view.destroy(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fontSize, minHeight, maxHeight, placeholder, readonly]);
+  }, [fontSize, minHeight, maxHeight, effectivePlaceholder, readonly]);
 
   // ── 同步外部 value 变化 ──────────────────────────────────
   useEffect(() => {
@@ -312,10 +323,23 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
     if (!viewRef.current) return;
     viewRef.current.dispatch({
       effects: autocompleteCompartmentRef.current.reconfigure(
-        buildAutocompleteExt(metadata)
+        buildAutocompleteExt(languageConfig, metadata)
       ),
     });
-  }, [metadata]);
+  }, [metadata, languageConfig]);
+
+  // ── language 变化时热更新语言扩展和补全源（不重建编辑器） ──
+  useEffect(() => {
+    if (!viewRef.current) return;
+    viewRef.current.dispatch({
+      effects: [
+        languageCompartmentRef.current.reconfigure(languageConfig.extension()),
+        autocompleteCompartmentRef.current.reconfigure(
+          buildAutocompleteExt(languageConfig, metadata)
+        ),
+      ],
+    });
+  }, [languageConfig]);
 
   // ── 全屏/尺寸变化时热更新布局约束（不重建编辑器） ────────
   useEffect(() => {
@@ -343,14 +367,15 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
   };
 
   const handleFormat = () => {
-    if (viewRef.current) {
-      const code = viewRef.current.state.doc.toString();
-      const formatted = GroovyFormatter.formatScript(code);
-      if (formatted !== code) {
-        viewRef.current.dispatch({
-          changes: { from: 0, to: viewRef.current.state.doc.length, insert: formatted },
-        });
-      }
+    if (!viewRef.current) return;
+    const code = viewRef.current.state.doc.toString();
+    const formatter = effectiveFormatter;
+    if (!formatter) return;
+    const formatted = formatter(code);
+    if (typeof formatted === 'string' && formatted !== code) {
+      viewRef.current.dispatch({
+        changes: { from: 0, to: viewRef.current.state.doc.length, insert: formatted },
+      });
     }
   };
 
@@ -382,7 +407,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
         }}
         enableThemeToggle={enableThemeToggle}
         enableFormat={enableFormat}
-        onFormat={readonly ? undefined : (onFormat ?? handleFormat)}
+        onFormat={readonly || !effectiveFormatter ? undefined : (onFormat ?? handleFormat)}
         enableCompile={enableCompile}
         onCompile={onCompile ? handleCompile : undefined}
         enableFullscreen={enableFullscreen}

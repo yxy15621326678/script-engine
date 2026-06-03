@@ -1,20 +1,21 @@
 [![npm](https://img.shields.io/npm/v/@coding-script/script-engine.svg)](https://www.npmjs.com/package/@coding-script/script-engine)
 # Script Engine
 
-基于 React + CodeMirror 6 的 Groovy 脚本编辑器组件库，提供语法高亮、动态类型自动补全、属性面板等功能。
+基于 React + CodeMirror 6 的多语言脚本编辑器组件库，内置支持 Groovy 和 JavaScript，提供语法高亮、动态类型自动补全、属性面板等功能。
 
 ## 功能特性
 
-- **Groovy 语法高亮**：基于 CodeMirror 6，支持完整的 Groovy/Java 语法着色
+- **多语言支持**：内置 Groovy 和 JavaScript 语言支持，支持通过 `LanguageConfig` 扩展任意语言
+- **语法高亮**：基于 CodeMirror 6，通过 `@codemirror/lang-*` 系列包提供各语言的语法着色
 - **动态类型自动补全**：基于 `ScriptMetadata` 提供变量名补全和点号链式访问补全（如 `request.test.name`）
-- **Groovy 语法提示**：内置 `if`/`for`/`while`/`println`/`return` 等常用 Groovy 语法片段
-- **代码格式化**：内置 Groovy 格式化器，也可通过 `onFormat` 自定义格式化逻辑
+- **语言语法提示**：内置各语言的常用语法片段（`if`/`for`/`while`/`return` 等），支持 tab-stop 占位符
+- **代码格式化**：Groovy 内置格式化器，也可通过 `onFormat` 自定义格式化逻辑
 - **属性面板**：右侧侧边栏展示主函数签名、函数入参、绑定参数、数据类型（字段和方法），支持折叠/展开和拖拽调节宽度
 - **脚本说明**：工具栏"脚本说明"按钮，点击展开/收起脚本描述弹框，支持多行文本和 `key: value` 格式高亮
 - **主题切换**：暗色/亮色两套主题，编辑器、补全弹窗、属性面板同步切换，编辑器内部管理主题状态
 - **全屏模式**：支持 CSS 全屏（`position: fixed` 覆盖视口），不影响编辑器内容
 - **自定义工具栏**：通过 `toolbarExtra` 传入任意 React 节点
-- **热更新**：主题和 metadata 变化时通过 Compartment 热更新，不重建编辑器，不丢失用户输入
+- **热更新**：主题、语言和 metadata 变化时通过 Compartment 热更新，不重建编辑器，不丢失用户输入
 
 ## 安装
 
@@ -77,6 +78,7 @@ function App() {
     <ScriptCodeEditor
       value="def run(request){\n    return request.count;\n}\n"
       title="Groovy 脚本编辑器"
+      language="groovy"
       defaultTheme="dark"
       metadata={metadata}
       enableThemeToggle
@@ -92,6 +94,32 @@ function App() {
 }
 ```
 
+### JavaScript 用法
+
+```tsx
+import { ScriptCodeEditor } from '@coding-script/script-engine';
+
+function App() {
+  return (
+    <ScriptCodeEditor
+      value="function run(request) {\n    return request.count;\n}\n"
+      title="JavaScript 脚本编辑器"
+      language="javascript"
+      defaultTheme="dark"
+      metadata={metadata}
+      enableThemeToggle
+      enableFormat
+      enableCompile
+      enableFullscreen
+      onFormat={() => {
+        // JavaScript 无内置格式化器，需自行提供
+        // 例如使用 prettier
+      }}
+    />
+  );
+}
+```
+
 ## Props
 
 | 属性 | 类型 | 默认值 | 说明 |
@@ -99,7 +127,8 @@ function App() {
 | `value` | `string` | `undefined` | 代码内容 |
 | `readonly` | `boolean` | `false` | 是否只读 |
 | `onChange` | `(value: string) => void` | `undefined` | 代码变化回调 |
-| `placeholder` | `string` | `'请输入 Groovy 脚本...'` | 空内容占位符 |
+| `language` | `string \| LanguageConfig` | `'groovy'` | 编程语言配置，支持内置语言名或自定义配置 |
+| `placeholder` | `string` | 由语言配置决定 | 空内容占位符（覆盖语言默认值） |
 | `defaultTheme` | `'dark' \| 'light'` | `'dark'` | 初始主题，编辑器内部管理状态 |
 | `onThemeChange` | `(theme: 'dark' \| 'light') => void` | `undefined` | 主题切换通知回调 |
 | `title` | `string` | `undefined` | 工具栏标题 |
@@ -113,7 +142,7 @@ function App() {
 | 属性 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
 | `enableThemeToggle` | `boolean` | `false` | 是否显示主题切换按钮 |
-| `enableFormat` | `boolean` | `false` | 是否显示格式化按钮（需配合 `onFormat`） |
+| `enableFormat` | `boolean` | `false` | 是否显示格式化按钮（需配合 `onFormat` 或 `language.formatter`） |
 | `enableCompile` | `boolean` | `false` | 是否显示编译验证按钮（需配合 `onCompile`） |
 | `enableFullscreen` | `boolean` | `false` | 是否显示全屏按钮 |
 
@@ -121,7 +150,7 @@ function App() {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |---|---|---|---|
-| `onFormat` | `() => void` | `undefined` | 格式化代码回调（不提供时使用内置 Groovy 格式化器） |
+| `onFormat` | `() => void` | `undefined` | 格式化代码回调（优先级高于 `language.formatter`） |
 | `onCompile` | `(code: string) => void` | `undefined` | 编译/测试脚本回调 |
 
 ### 自定义工具栏
@@ -245,6 +274,87 @@ interface ScriptRequestInfo {
 
 > **注意**：`metadata` 必须是解析后的 JavaScript 对象，不能是 JSON 字符串。如果从 API 获取的是 JSON 字符串，需要先 `JSON.parse()` 再传入。
 
+## 多语言支持
+
+### 内置语言
+
+组件内置支持以下语言：
+
+| 语言名 | 语法高亮 | 语法片段 | 内置格式化器 |
+|---|---|---|---|
+| `'groovy'` | `@codemirror/lang-java` | 21 个（`if`/`for`/`def`/`each`/`collect` 等） | ✅ `GroovyFormatter` |
+| `'javascript'` | `@codemirror/lang-javascript` | 22 个（`if`/`for`/`function`/`=>`/`class` 等） | ❌（可通过 `onFormat` 提供） |
+
+使用内置语言只需传入语言名：
+
+```tsx
+<ScriptCodeEditor language="groovy" />
+<ScriptCodeEditor language="javascript" />
+```
+
+### 自定义语言扩展
+
+通过传入 `LanguageConfig` 对象可以支持任意语言：
+
+```tsx
+import { python } from '@codemirror/lang-python';
+
+const PYTHON_SNIPPETS = [
+  { label: 'def', type: 'keyword', apply: snippet('def ${name}(${params}):\n\t${}\n') },
+  { label: 'class', type: 'keyword', apply: snippet('class ${ClassName}:\n\tdef __init__(self):\n\t\t${}\n') },
+  { label: 'if', type: 'keyword', apply: snippet('if ${condition}:\n\t${}\n') },
+  { label: 'for', type: 'keyword', apply: snippet('for ${item} in ${iterable}:\n\t${}\n') },
+  { label: 'print', type: 'keyword', apply: snippet('print(${})') },
+  { label: 'return', type: 'keyword', apply: snippet('return ${}') },
+  // ... 更多语法片段
+];
+
+<ScriptCodeEditor
+  language={{
+    name: 'python',
+    displayName: 'Python',
+    extension: () => python(),
+    keywordSnippets: PYTHON_SNIPPETS,
+    syntaxNodeNames: {
+      stringNodes: ['String'],
+      commentNodes: ['LineComment', 'BlockComment'],
+    },
+    placeholder: '请输入 Python 脚本...',
+    formatter: (code) => customPythonFormatter(code),
+  }}
+/>
+```
+
+### LanguageConfig 类型定义
+
+```typescript
+interface LanguageConfig {
+  /** 语言标识名（小写） */
+  name: string;
+  /** 显示名称 */
+  displayName: string;
+  /** CodeMirror 语言扩展工厂 */
+  extension: () => Extension;
+  /** 关键字和语法片段列表 */
+  keywordSnippets: readonly Completion[];
+  /** 语法树节点名（用于判断字符串/注释位置，抑制自动补全） */
+  syntaxNodeNames: {
+    /** 字符串类节点名 */
+    stringNodes: string[];
+    /** 注释类节点名 */
+    commentNodes: string[];
+  };
+  /** 默认占位符文本（可选） */
+  placeholder?: string;
+  /** 内置格式化函数（可选，优先级低于 onFormat prop） */
+  formatter?: (code: string) => string;
+}
+```
+
+### 语言切换热更新
+
+语言切换时通过 Compartment 热更新，不重建编辑器，不丢失用户已输入的内容。
+
 ## 自动补全
 
 提供 metadata 后，编辑器支持以下补全能力：
@@ -254,9 +364,11 @@ interface ScriptRequestInfo {
 | `re` | 弹出 `request`、`$request` 等变量 |
 | `request.` | 弹出 `count`、`test`、`isSupport` 等字段和方法 |
 | `request.test.` | 弹出 `id`、`name` 等链式访问成员 |
-| `if` / `for` / `while` | 弹出 Groovy 语法片段（含 tab-stop 占位符） |
+| `if` / `for` / `while` | 弹出当前语言的语法片段（含 tab-stop 占位符） |
 
-不提供 metadata 时，仅启用 Groovy 关键字和语法片段补全。
+不提供 metadata 时，仅启用当前语言的关键字和语法片段补全。
+
+> 补全不会在字符串和注释内触发（通过各语言的语法树节点名判断）。
 
 ## 本地开发
 
@@ -275,7 +387,7 @@ pnpm run dev:app-pc
 
 ## 技术栈
 
-- **编辑器**：[CodeMirror 6](https://codemirror.net/)（`@codemirror/view`、`state`、`autocomplete`、`lang-java`、`theme-one-dark`）
+- **编辑器**：[CodeMirror 6](https://codemirror.net/)（`@codemirror/view`、`state`、`autocomplete`、`lang-java`、`lang-javascript`、`theme-one-dark`）
 - **构建工具**：[Rslib](https://rslib.rs/)（库）+ [Rsbuild](https://rsbuild.dev/)（演示应用）
 - **包管理**：pnpm monorepo（workspaces）
 - **UI**：纯 CSS-in-JS（React `style` 对象），库本身不依赖 Ant Design

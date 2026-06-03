@@ -1,4 +1,6 @@
 import type React from 'react';
+import type { Completion } from '@codemirror/autocomplete';
+import type { Extension } from '@codemirror/state';
 
 // ── 工具栏按钮 ────────────────────────────────────────────────
 
@@ -121,6 +123,26 @@ export interface ScriptCodeEditorProps {
   onChange?: (value: string) => void;
   /** 占位符 */
   placeholder?: string;
+  /**
+   * 编程语言配置（默认 'groovy'）。
+   *
+   * - 传入内置语言名：`'groovy'` | `'javascript'`
+   * - 传入自定义 `LanguageConfig` 对象以支持其他语言
+   *
+   * @example
+   * // 内置语言
+   * <ScriptCodeEditor language="javascript" />
+   *
+   * // 自定义语言
+   * <ScriptCodeEditor language={{
+   *   name: 'python',
+   *   displayName: 'Python',
+   *   extension: () => python(),
+   *   keywordSnippets: PYTHON_SNIPPETS,
+   *   syntaxNodeNames: { stringNodes: ['String'], commentNodes: ['LineComment', 'BlockComment'] },
+   * }} />
+   */
+  language?: string | LanguageConfig;
   /** 初始主题（默认 'dark'），编辑器内部管理状态 */
   defaultTheme?: 'dark' | 'light';
   /** 主题切换通知回调（可选） */
@@ -135,7 +157,7 @@ export interface ScriptCodeEditorProps {
   // ── 工具栏按钮开关（全部默认 false） ─────────────────────
   /** 是否显示主题切换按钮（默认 false） */
   enableThemeToggle?: boolean;
-  /** 是否显示格式化按钮（默认 false，需配合 onFormat 使用） */
+  /** 是否显示格式化按钮（默认 false，需配合 onFormat 或 language.formatter 使用） */
   enableFormat?: boolean;
   /** 是否显示编译验证按钮（默认 false，需配合 onCompile 使用） */
   enableCompile?: boolean;
@@ -143,7 +165,7 @@ export interface ScriptCodeEditorProps {
   enableFullscreen?: boolean;
 
   // ── 按钮回调 ─────────────────────────────────────────────
-  /** 格式化代码回调（enableFormat 时需提供） */
+  /** 格式化代码回调（enableFormat 时提供，优先级高于 language.formatter） */
   onFormat?: () => void;
   /** 编译/测试脚本回调（enableCompile 时需提供） */
   onCompile?: (code: string) => void;
@@ -163,4 +185,55 @@ export interface ScriptCodeEditorProps {
     /** 最大高度 */
     maxHeight?: number;
   };
+}
+
+// ── 多语言支持 ─────────────────────────────────────────────────
+
+/** 格式化选项 */
+export interface FormatOptions {
+  /** 缩进大小（空格数） */
+  indentSize?: number;
+  /** 操作符周围添加空格 */
+  addSpacesAroundOperators?: boolean;
+  /** 格式化注释 */
+  formatComments?: boolean;
+  /** 最大行长度 */
+  maxLineLength?: number;
+  /** 保留空行 */
+  preserveEmptyLines?: boolean;
+}
+
+/** 格式化函数签名 */
+export type FormatFn = (code: string, options?: FormatOptions) => string;
+
+/**
+ * 语言配置接口
+ *
+ * 封装一个编程语言在编辑器中所需的全部差异点：
+ * - CodeMirror 语法高亮扩展
+ * - 关键字/语法片段
+ * - AST 节点名（用于判断字符串/注释位置，抑制自动补全）
+ * - 默认占位符文本
+ * - 可选的内置格式化器
+ */
+export interface LanguageConfig {
+  /** 语言标识名（小写），如 'groovy'、'javascript' */
+  name: string;
+  /** 显示名称，如 'Groovy'、'JavaScript' */
+  displayName: string;
+  /** CodeMirror 语言扩展工厂 */
+  extension: () => Extension;
+  /** 关键字和语法片段列表 */
+  keywordSnippets: readonly Completion[];
+  /** 各语言的语法树节点名（用于 isInStringOrComment 判断） */
+  syntaxNodeNames: {
+    /** 字符串类节点名，如 Java: ['StringLiteral']，JS: ['String', 'TemplateString'] */
+    stringNodes: string[];
+    /** 注释类节点名，如 ['LineComment', 'BlockComment'] */
+    commentNodes: string[];
+  };
+  /** 默认占位符文本 */
+  placeholder?: string;
+  /** 可选的内置格式化函数（优先级低于 onFormat prop） */
+  formatter?: FormatFn;
 }
