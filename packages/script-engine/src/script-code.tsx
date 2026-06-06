@@ -381,6 +381,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
 
   return (
     <div
+      className="script-editor"
       style={
         isFullscreen
           ? {
@@ -420,6 +421,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
 
       {/* ── 编辑器 + 侧边栏 ───────────────────────────── */}
       <div
+        className="script-editor-body"
         style={{
           display: 'flex',
           border: `1px solid ${borderColor}`,
@@ -430,7 +432,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
           minHeight: isFullscreen ? 0 : undefined,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+        <div className="script-editor-code" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           {metadata && !sidebarOpen && (
             <ExpandSidebarButton
               borderColor={borderColor}
@@ -441,6 +443,7 @@ export const ScriptCodeEditor: React.FC<ScriptCodeEditorProps> = (props) => {
           )}
           <div
             ref={editorContainerRef}
+            className="script-editor-codemirror"
             style={isFullscreen ? { height: '100%' } : undefined}
           />
         </div>

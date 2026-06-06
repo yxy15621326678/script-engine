@@ -16,7 +16,7 @@ export const VariablesSection: React.FC<VariablesSectionProps> = ({ sortedBinds,
   }
 
   return (
-    <div>
+    <div className="variables-section">
       {/* 函数入参 */}
       {sortedRequests.length > 0 && (
         <>

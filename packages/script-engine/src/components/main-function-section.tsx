@@ -10,7 +10,7 @@ export interface MainFunctionSectionProps {
 
 export const MainFunctionSection: React.FC<MainFunctionSectionProps> = ({ metadata, colors }) => {
   return (
-    <div>
+    <div className="main-function-section">
       <SectionHeader colors={colors} label="主函数" />
       <div style={{ padding: '4px 12px 4px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>

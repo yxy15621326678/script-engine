@@ -12,7 +12,7 @@ export interface DataTypesSectionProps {
 }
 
 export const DataTypesSection: React.FC<DataTypesSectionProps> = ({ allTypes, expanded, onToggle, colors }) => (
-  <div style={{ marginTop: 4 }}>
+  <div className="data-types-section" style={{ marginTop: 4 }}>
     <SectionHeader colors={colors} label="数据类型" />
     {allTypes.length === 0 ? (
       <div

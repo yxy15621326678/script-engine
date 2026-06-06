@@ -20,6 +20,7 @@ export const DragHandle: React.FC<DragHandleProps> = ({
 
   return (
     <div
+      className="se-drag-handle"
       onMouseDown={onMouseDown}
       onMouseEnter={() => onHoverChange(true)}
       onMouseLeave={() => onHoverChange(false)}

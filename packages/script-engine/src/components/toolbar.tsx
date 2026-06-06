@@ -166,6 +166,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <div
+      className="script-editor-toolbar"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -180,6 +181,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     >
       {title && (
         <span
+          className="script-editor-toolbar-title"
           style={{
             color: toolbarText,
             fontWeight: 600,
@@ -192,7 +194,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {title}
         </span>
       )}
-      {!title && <span style={{ marginRight: 'auto' }} />}
+      {!title && <span className="script-editor-toolbar-title" style={{ marginRight: 'auto' }} />}
 
 
       {/* 脚本说明按钮 */}

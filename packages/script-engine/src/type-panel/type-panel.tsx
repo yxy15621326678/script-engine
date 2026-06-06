@@ -113,6 +113,7 @@ export const TypePanel: React.FC<TypePanelProps> = ({
   return (
     <div
       ref={panelRef}
+      className="type-panel"
       style={{
         width,
         flexShrink: 0,
@@ -135,6 +136,7 @@ export const TypePanel: React.FC<TypePanelProps> = ({
 
       {/* 面板主体 */}
       <div
+        className="type-panel-body"
         style={{
           flex: 1,
           minWidth: 0,
@@ -154,7 +156,7 @@ export const TypePanel: React.FC<TypePanelProps> = ({
 
         {/* 可滚动内容 */}
         <div
-          className={SCROLL_CLASS}
+          className={`type-panel-content ${SCROLL_CLASS}`}
           style={{
             flex: 1,
             overflowY: 'auto',

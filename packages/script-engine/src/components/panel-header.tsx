@@ -11,6 +11,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({ colors, onCollapse }) 
 
   return (
     <div
+      className="panel-header"
       style={{
         padding: '8px 12px',
         display: 'flex',
